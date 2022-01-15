@@ -11,7 +11,7 @@ import (
 type PieceType uint8
 
 const ( // piece types
-	NoPiece PieceType = iota
+	NoType PieceType = iota
 	Pawn
 	Knight
 	Bishop
@@ -20,7 +20,7 @@ const ( // piece types
 	King
 
 	typeMask  uint8 = 0b111
-	typeShift uint8 = 1
+	typeShift uint8 = 2
 )
 
 func (pt PieceType) String() string {
@@ -55,18 +55,21 @@ func (pt PieceType) String() string {
 type SideColor uint8
 
 const ( // side colors
-	White SideColor = iota
+	NoColor SideColor = iota
+	White
 	Black
 
-	colorMask  uint8 = 0b1
+	colorMask  uint8 = 0b11
 	colorShift uint8 = 0
 )
 
 func (sc SideColor) String() string {
 	if sc == White {
 		return "w"
+	} else if sc == Black {
+		return "b"
 	}
-	return "b"
+	return "-"
 }
 
 //
@@ -87,7 +90,12 @@ func (sc SideColor) String() string {
 // Example (white bishop):	0000 011 0
 type Piece uint8
 
+const NoPiece = Piece(0)
+
 func NewPiece(c SideColor, t PieceType) Piece {
+	if t > King {
+		return Piece(0)
+	}
 	return Piece((uint8(t)&typeMask)<<typeShift | (uint8(c)&colorMask)<<colorShift)
 }
 func PieceFromRune(r rune) (Piece, bool) {
@@ -117,7 +125,7 @@ func (p Piece) Color() SideColor {
 	return SideColor(uint8(p) >> colorShift & colorMask)
 }
 func (piece Piece) String() string {
-	if piece.Type() > King || piece.Type() == NoPiece {
+	if piece.Type() > King || piece == NoPiece {
 		return ""
 	}
 
@@ -146,35 +154,44 @@ func (piece Piece) String() string {
 // Example (h2):	11 111 001
 // Example (a1):	11 000 000
 
-// The zero value represents an empty coordinate, but if its first two bits are 1s, then it is the coordinate (0, 0) (a1)
+// The zero value represents an empty coordinate, but if its first bit is a 1, then it is the coordinate (0, 0) (a1)
 type Coord uint8
-type File uint8
-type Rank uint8
 
 const (
-	fileMask  uint8 = 0b111
-	fileShift uint8 = 3
+	NoCoord Coord = Coord(0)
 
-	rankMask  uint8 = 0b111
-	rankShift uint8 = 0
+	coordMask uint8 = 0b111
+	indexMask uint8 = 0b111111
 )
 
-func NewCoord(f File, r Rank) Coord {
-	return Coord(0b11000000 | (uint8(f)&fileMask)<<fileShift | (uint8(r)&rankMask)<<rankShift)
+func NewCoord(f, r int) Coord {
+	if f < 0 || f > 7 || r < 0 || r > 7 {
+		return NoCoord
+	}
+	return Coord(1<<7 | uint8(r)<<3 | uint8(f))
 }
 func CoordFromString(s string) (Coord, bool) {
 	if len(s) != 2 || s[0] < 'a' || s[0] > 'h' || s[1] < '1' || s[1] > '8' {
 		return Coord(0), false
 	}
 
-	return NewCoord(File(s[0]-'a'), Rank(s[1]-'1')), true
+	return NewCoord(int(s[0]-'a'), int(s[1]-'1')), true
+}
+func coordFromIndex(i int) Coord {
+	if i < 0 || i > 63 {
+		return NoCoord
+	}
+	return Coord(1<<7 | uint8(i))
 }
 
-func (c Coord) File() File {
-	return File(uint8(c) >> fileShift & fileMask)
+func (c Coord) File() int {
+	return int(uint8(c) & coordMask) // mod by 8
 }
-func (c Coord) Rank() Rank {
-	return Rank(uint8(c) >> rankShift & rankMask)
+func (c Coord) Rank() int {
+	return int(uint8(c) >> 3 & coordMask) // divide by 8
+}
+func (c Coord) index() int {
+	return int(uint8(c) & indexMask)
 }
 
 func (c Coord) String() string {
@@ -301,6 +318,7 @@ type Board struct {
 
 func NewBoard() *Board {
 	board := new(Board)
+	board.SideToMove = White
 	board.FullmoveCounter = 1
 
 	return board
@@ -386,7 +404,7 @@ func BoardFromString(fen string) (*Board, error) {
 }
 
 func (board *Board) At(c Coord) *Piece {
-	return &board.squares[int(c.Rank())*8+int(c.File())]
+	return &board.squares[c.index()]
 }
 func (board *Board) Flip() {
 	if board.Orientation == White {
@@ -401,7 +419,7 @@ func (board *Board) FEN() string {
 	spaces := 0
 	for f, r := 0, 7; r >= 0; {
 		piece := board.squares[r*8+f]
-		if piece.Type() == NoPiece {
+		if piece == NoPiece {
 			spaces++
 		} else {
 			if pieceString := piece.String(); pieceString == "" {
@@ -488,6 +506,7 @@ func StartingPosition() *Board {
 			NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
 			NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
 		},
+		SideToMove:      White,
 		CanCastle:       [4]bool{true, true, true, true},
 		FullmoveCounter: 1,
 	}

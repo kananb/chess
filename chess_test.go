@@ -141,6 +141,7 @@ func TestBoardToFEN(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Knight), Piece(0), Piece(0), NewPiece(Black, Pawn),
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 				},
+				SideToMove:      White,
 				CanCastle:       [4]bool{false, false, false, false},
 				FullmoveCounter: 1,
 			},
@@ -158,6 +159,7 @@ func TestBoardToFEN(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
+				SideToMove:      White,
 				CanCastle:       [4]bool{true, true, false, true},
 				FullmoveCounter: 1,
 			},
@@ -175,6 +177,7 @@ func TestBoardToFEN(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
+				SideToMove:      White,
 				CanCastle:       [4]bool{true, true, false, false},
 				FullmoveCounter: 1,
 			},
@@ -246,6 +249,7 @@ func TestFENToBoard(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Knight), Piece(0), Piece(0), NewPiece(Black, Pawn),
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 				},
+				SideToMove:      White,
 				CanCastle:       [4]bool{false, false, false, false},
 				HalfmoveClock:   5,
 				FullmoveCounter: 13,
@@ -264,6 +268,7 @@ func TestFENToBoard(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
+				SideToMove:      White,
 				CanCastle:       [4]bool{true, true, false, true},
 				FullmoveCounter: 1,
 			},
@@ -281,6 +286,7 @@ func TestFENToBoard(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
+				SideToMove:      White,
 				CanCastle:       [4]bool{true, true, false, false},
 				FullmoveCounter: 1,
 			},
@@ -334,6 +340,7 @@ func TestFENToBoard(t *testing.T) {
 					NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), Piece(0), Piece(0), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
 					NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
 				},
+				SideToMove:      White,
 				CanCastle:       [4]bool{true, true, true, true},
 				EnPassantTarget: NewCoord(4, 5),
 				FullmoveCounter: 3,
@@ -358,38 +365,64 @@ func TestFENToBoard(t *testing.T) {
 				if err != nil {
 					t.Log(err)
 				}
-				t.Errorf("FEN.ToBoard(%q) =\n%v, want\n%v", test.fen, got, test.want)
+				t.Errorf("BoardFromString(%q) =\n%v, want\n%v", test.fen, got, test.want)
 			}
 		} else {
 			// check piece placement
 			for i := 0; i < len(got.squares); i++ {
 				if got.squares[i] != test.want.squares[i] {
-					t.Errorf("FEN.ToBoard(%q) =\n%v, want\n%v", test.fen, got, test.want)
+					t.Errorf("BoardFromString(%q) =\n%v, want\n%v", test.fen, got, test.want)
 					break
 				}
 			}
 
 			// check metadata
 			if got.SideToMove != test.want.SideToMove {
-				t.Errorf("FEN.ToBoard(%q).SideToMove = %v, want %v", test.fen, got.SideToMove, test.want.SideToMove)
+				t.Errorf("BoardFromString(%q).SideToMove = %v, want %v", test.fen, got.SideToMove, test.want.SideToMove)
 			} else if got.CanCastle != test.want.CanCastle {
-				t.Errorf("FEN.ToBoard(%q).CanCastle = %v, want %v", test.fen, got.CanCastle, test.want.CanCastle)
+				t.Errorf("BoardFromString(%q).CanCastle = %v, want %v", test.fen, got.CanCastle, test.want.CanCastle)
 			} else if got.EnPassantTarget != test.want.EnPassantTarget {
-				t.Errorf("FEN.ToBoard(%q).EnPassantTarget = %v, want %v", test.fen, got.EnPassantTarget, test.want.EnPassantTarget)
+				t.Errorf("BoardFromString(%q).EnPassantTarget = %v, want %v", test.fen, got.EnPassantTarget, test.want.EnPassantTarget)
 			} else if got.HalfmoveClock != test.want.HalfmoveClock {
-				t.Errorf("FEN.ToBoard(%q).HalfmoveClock = %v, want %v", test.fen, got.HalfmoveClock, test.want.HalfmoveClock)
+				t.Errorf("BoardFromString(%q).HalfmoveClock = %v, want %v", test.fen, got.HalfmoveClock, test.want.HalfmoveClock)
 			} else if got.FullmoveCounter != test.want.FullmoveCounter {
-				t.Errorf("FEN.ToBoard(%q).SideToMove = %v, want %v", test.fen, got.FullmoveCounter, test.want.FullmoveCounter)
+				t.Errorf("BoardFromString(%q).SideToMove = %v, want %v", test.fen, got.FullmoveCounter, test.want.FullmoveCounter)
 			}
 		}
 	}
 }
 
+func TestCoord(t *testing.T) {
+	tests := []struct {
+		coord     Coord
+		wantFile  int
+		wantRank  int
+		wantIndex int
+	}{
+		{NewCoord(0, 0), 0, 0, 0},
+		{NewCoord(1, 0), 1, 0, 1},
+		{NewCoord(2, 1), 2, 1, 10},
+		{NewCoord(3, 1), 3, 1, 11},
+		{NewCoord(0, 2), 0, 2, 16},
+		{NewCoord(0, 3), 0, 3, 24},
+		{NewCoord(7, 4), 7, 4, 39},
+		{NewCoord(-1, 9), 0, 0, 0},
+	}
+
+	for _, test := range tests {
+		gotFile := test.coord.File()
+		gotRank := test.coord.Rank()
+		gotIndex := test.coord.index()
+		if gotFile != test.wantFile || gotRank != test.wantRank || gotIndex != test.wantIndex {
+			t.Errorf("Coord{File: %d, Rank: %d, Index: %d} != {%d, %d, %d}", gotFile, gotRank, gotIndex, test.wantFile, test.wantRank, test.wantIndex)
+		}
+	}
+}
+
 func TestPawnMoveGen(t *testing.T) {
-	board, _ := BoardFromString("r1b2rk1/pp2q1p1/2n5/4Pp2/4Q3/2P2NP1/PP3PP1/RN2K2R w KQ f6 0 19")
-	t.Log("\n", board)
-	board.SideToMove = White
+	board, _ := BoardFromString("8/8/8/bbbbbbbb/8/8/8/8 b KQkq - 0 1")
+	t.Logf("\n%v", board)
 	moves := board.GenMoves()
 
-	t.Error(moves)
+	t.Error(len(moves))
 }
