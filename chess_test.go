@@ -384,3 +384,12 @@ func TestFENToBoard(t *testing.T) {
 		}
 	}
 }
+
+func TestPawnMoveGen(t *testing.T) {
+	board, _ := BoardFromString("r1b2rk1/pp2q1p1/2n5/4Pp2/4Q3/2P2NP1/PP3PP1/RN2K2R w KQ f6 0 19")
+	t.Log("\n", board)
+	board.SideToMove = White
+	moves := board.GenMoves()
+
+	t.Error(moves)
+}
