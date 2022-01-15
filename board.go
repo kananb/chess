@@ -8,116 +8,385 @@ import (
 	"unicode"
 )
 
-/*
- *
- *
- * Piece structure methods / functions
- */
-func NewPiece(symbol rune) Piece {
-	return map[rune]Piece{
-		'p': Piece(Black | Pawn),
-		'n': Piece(Black | Knight),
-		'b': Piece(Black | Bishop),
-		'r': Piece(Black | Rook),
-		'q': Piece(Black | Queen),
-		'k': Piece(Black | King),
+type PieceType uint8
 
-		'P': Piece(White | Pawn),
-		'N': Piece(White | Knight),
-		'B': Piece(White | Bishop),
-		'R': Piece(White | Rook),
-		'Q': Piece(White | Queen),
-		'K': Piece(White | King),
-	}[symbol]
+const ( // piece types
+	NoPiece PieceType = iota
+	Pawn
+	Knight
+	Bishop
+	Rook
+	Queen
+	King
+
+	typeMask  uint8 = 0b111
+	typeShift uint8 = 1
+)
+
+func (pt PieceType) String() string {
+	switch pt {
+	case Pawn:
+		return "pawn"
+	case Knight:
+		return "knight"
+	case Bishop:
+		return "bishop"
+	case Rook:
+		return "rook"
+	case Queen:
+		return "queen"
+	case King:
+		return "king"
+	default:
+		return "none"
+	}
 }
-func (piece Piece) Type() uint8 {
-	return uint8(piece) & typeMask
+
+//
+// --------------------------------------------------------
+// PIECE TYPE
+//
+//
+//
+// COLOR
+// --------------------------------------------------------
+//
+
+type SideColor uint8
+
+const ( // side colors
+	White SideColor = iota
+	Black
+
+	colorMask  uint8 = 0b1
+	colorShift uint8 = 0
+)
+
+func (sc SideColor) String() string {
+	if sc == White {
+		return "w"
+	}
+	return "b"
 }
-func (piece Piece) Color() uint8 {
-	return uint8(piece) & colorMask
+
+//
+// --------------------------------------------------------
+// COLOR
+//
+//
+//
+// PIECE
+// --------------------------------------------------------
+//
+
+// Piece encoding
+// msb  [0000]  [000..110] [0..1] lsb
+//      unused     type     color
+//
+// Example (black rook):	0000 100 1
+// Example (white bishop):	0000 011 0
+type Piece uint8
+
+func NewPiece(c SideColor, t PieceType) Piece {
+	return Piece((uint8(t)&typeMask)<<typeShift | (uint8(c)&colorMask)<<colorShift)
+}
+func PieceFromRune(r rune) (Piece, bool) {
+	p, ok := map[rune]Piece{
+		'p': NewPiece(Black, Pawn),
+		'n': NewPiece(Black, Knight),
+		'b': NewPiece(Black, Bishop),
+		'r': NewPiece(Black, Rook),
+		'q': NewPiece(Black, Queen),
+		'k': NewPiece(Black, King),
+
+		'P': NewPiece(White, Pawn),
+		'N': NewPiece(White, Knight),
+		'B': NewPiece(White, Bishop),
+		'R': NewPiece(White, Rook),
+		'Q': NewPiece(White, Queen),
+		'K': NewPiece(White, King),
+	}[r]
+
+	return p, ok
+}
+
+func (p Piece) Type() PieceType {
+	return PieceType(uint8(p) >> typeShift & typeMask)
+}
+func (p Piece) Color() SideColor {
+	return SideColor(uint8(p) >> colorShift & colorMask)
 }
 func (piece Piece) String() string {
-	if piece > Piece(Black|King) || piece == NoPiece {
+	if piece.Type() > King || piece.Type() == NoPiece {
 		return ""
 	}
 
-	i := (piece.Type() >> typeShift) - 1
-	name := [...]rune{'p', 'n', 'b', 'r', 'q', 'k'}[i]
-	if (piece.Color() >> colorShift) == White {
-		name += 'A' - 'a'
+	name := [...]rune{'p', 'n', 'b', 'r', 'q', 'k'}[int(piece.Type())-1]
+	if piece.Color() == White {
+		name += 'A' - 'a' // capitalize name
 	}
 	return string(name)
 }
 
-/*
- *
- *
- * Coord structure methods / functions
- */
-func NewCoord(pos string) Coord {
-	if len(pos) != 2 || pos[0] < 'a' || pos[0] > 'h' || pos[1] < '1' || pos[1] > '8' {
-		return NoCoord
+//
+// --------------------------------------------------------
+// PIECE
+//
+//
+//
+// COORD
+// --------------------------------------------------------
+//
+
+// Square encoding:
+// msb  [00]   [000..111] [000..111]  lsb
+//    is_valid    file       rank
+//
+// Example (b6):	11 001 101
+// Example (h2):	11 111 001
+// Example (a1):	11 000 000
+
+// The zero value represents an empty coordinate, but if its first two bits are 1s, then it is the coordinate (0, 0) (a1)
+type Coord uint8
+type File uint8
+type Rank uint8
+
+const (
+	fileMask  uint8 = 0b111
+	fileShift uint8 = 3
+
+	rankMask  uint8 = 0b111
+	rankShift uint8 = 0
+)
+
+func NewCoord(f File, r Rank) Coord {
+	return Coord(0b11000000 | (uint8(f)&fileMask)<<fileShift | (uint8(r)&rankMask)<<rankShift)
+}
+func CoordFromString(s string) (Coord, bool) {
+	if len(s) != 2 || s[0] < 'a' || s[0] > 'h' || s[1] < '1' || s[1] > '8' {
+		return Coord(0), false
 	}
 
-	return Coord((uint8(pos[0]-'a') << fileShift) | (uint8(pos[1]-'1') << rankShift) | 1)
-}
-func (coord Coord) IsValid() bool {
-	return uint8(coord)&1 == 1 && uint8(coord) <= File|Rank|1
-}
-func (coord Coord) File() int {
-	return int((uint8(coord) & File) >> fileShift)
-}
-func (coord Coord) Rank() int {
-	return int((uint8(coord) & Rank) >> rankShift)
-}
-func (coord Coord) String() string {
-	return fmt.Sprintf("%c%d", 'a'+rune(coord.File()), coord.Rank()+1)
+	return NewCoord(File(s[0]-'a'), Rank(s[1]-'1')), true
 }
 
-func (move Move) IsValid(board *Board) bool {
-	return move.Start.IsValid() && move.Target.IsValid() && board.Get(move.Start) != NoPiece
+func (c Coord) File() File {
+	return File(uint8(c) >> fileShift & fileMask)
 }
-func (move Move) Translation() (x, y int) {
-	return move.Target.File() - move.Start.File(), move.Target.Rank() - move.Start.Rank()
+func (c Coord) Rank() Rank {
+	return Rank(uint8(c) >> rankShift & rankMask)
 }
 
-/*
- *
- *
- * Board structure methods / functions
- */
+func (c Coord) String() string {
+	return fmt.Sprintf("%c%d", 'a'+rune(c.File()), c.Rank()+1)
+}
+
+//
+// --------------------------------------------------------
+// COORD
+//
+//
+//
+// MOVE
+// --------------------------------------------------------
+//
+
+// Move structure
+type Move struct {
+	Start, End Coord
+}
+
+func NewMove(start, end Coord) Move {
+	return Move{start, end}
+}
+
+func (m Move) String() string {
+	return fmt.Sprintf("%v->%v", m.Start, m.End)
+}
+
+//
+// --------------------------------------------------------
+// MOVE
+//
+//
+//
+// CASTLES
+// --------------------------------------------------------
+//
+
+type CastleSide uint8
+
+// Castle Structure
+type Castles [4]bool
+
+const (
+	WhiteKingside CastleSide = iota
+	WhiteQueenside
+	BlackKingside
+	BlackQueenside
+)
+
+func NewCastles(sides ...CastleSide) (castles Castles) {
+	for _, s := range sides {
+		if int(s) < len(castles) {
+			castles[s] = true
+		}
+	}
+	return
+}
+func CastlesFromString(s string) (castles Castles, ok bool) {
+	for _, symbol := range s {
+		switch {
+		case symbol == 'K' && !castles[WhiteKingside]:
+			castles[WhiteKingside] = true
+		case symbol == 'Q' && !castles[WhiteQueenside]:
+			castles[WhiteQueenside] = true
+		case symbol == 'k' && !castles[BlackKingside]:
+			castles[BlackKingside] = true
+		case symbol == 'q' && !castles[BlackQueenside]:
+			castles[BlackQueenside] = true
+		default:
+			return castles, false
+		}
+	}
+
+	return castles, true
+}
+func (c Castles) String() string {
+	buf := bytes.Buffer{}
+
+	if c[WhiteKingside] {
+		buf.WriteByte('K')
+	}
+	if c[WhiteQueenside] {
+		buf.WriteByte('Q')
+	}
+	if c[BlackKingside] {
+		buf.WriteByte('k')
+	}
+	if c[BlackQueenside] {
+		buf.WriteByte('q')
+	}
+
+	if buf.Len() == 0 {
+		return "-"
+	}
+	return buf.String()
+}
+
+//
+// --------------------------------------------------------
+// CASTLES
+//
+//
+//
+// BOARD
+// --------------------------------------------------------
+//
+
+// A chess board structure
+// Keeps track of piece positions, board orientation,
+// side-to-move, castling ability, en passant target,
+// the halfmove clock, and fullmove counter
+type Board struct {
+	squares     [64]Piece
+	Orientation SideColor
+
+	SideToMove      SideColor
+	CanCastle       Castles
+	EnPassantTarget Coord
+	HalfmoveClock   int
+	FullmoveCounter int
+}
+
 func NewBoard() *Board {
-	return &Board{
-		squares: [64]Piece{
-			Piece(White | Rook), Piece(White | Knight), Piece(White | Bishop), Piece(White | Queen), Piece(White | King), Piece(White | Bishop), Piece(White | Knight), Piece(White | Rook),
-			Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn),
-			0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0,
-			Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn),
-			Piece(Black | Rook), Piece(Black | Knight), Piece(Black | Bishop), Piece(Black | Queen), Piece(Black | King), Piece(Black | Bishop), Piece(Black | Knight), Piece(Black | Rook),
-		},
-		CanCastle:       [4]bool{true, true, true, true},
-		FullmoveCounter: 1,
-	}
-}
-func EmptyBoard() (board *Board) {
-	defer func() { board.FullmoveCounter = 1 }()
-	return new(Board)
-}
-func (board *Board) Get(coord Coord) Piece {
-	if !coord.IsValid() {
-		return NoPiece
-	}
-	return board.squares[coord.Rank()*8+coord.File()]
-}
-func (board *Board) Set(coord Coord, piece Piece) {
-	if !coord.IsValid() {
-		return
-	}
-	board.squares[coord.Rank()*8+coord.File()] = piece
+	board := new(Board)
+	board.FullmoveCounter = 1
 
+	return board
+}
+func BoardFromString(fen string) (*Board, error) {
+	fields := strings.Split(string(fen), " ")
+	if len(fields) != 6 {
+		return nil, fmt.Errorf("not enough fields: %d, want 6", len(fields))
+	}
+
+	board := NewBoard()
+
+	// Extract piece placement information
+	f, r := 0, 7
+	for _, symbol := range fields[0] {
+		if unicode.IsDigit(symbol) {
+			f += int(symbol - '0')
+		} else {
+			piece, ok := PieceFromRune(symbol)
+			if ok {
+				board.squares[r*8+f] = piece
+				f++
+			} else if symbol != '/' {
+				return nil, fmt.Errorf("unknown piece placement symbol: %q", symbol)
+			}
+		}
+
+		if f >= 8 {
+			f = 0
+			r--
+		}
+	}
+	if r >= 0 {
+		return nil, fmt.Errorf("not enough piece placement symbols")
+	}
+
+	// Extract side to move
+	switch fields[1] {
+	case "w":
+		board.SideToMove = White
+	case "b":
+		board.SideToMove = Black
+	default:
+		return nil, fmt.Errorf("unknown side to move: %q", fields[1])
+	}
+
+	// Extract castling ability
+	if len(fields[2]) > 4 || len(fields[2]) < 1 {
+		return nil, fmt.Errorf("invalid castle character count: %d, want 1-4", len(fields[2]))
+	}
+	if fields[2] != "-" {
+		if castles, ok := CastlesFromString(fields[2]); !ok {
+			return nil, fmt.Errorf("invalid castle string: %q, want \"-|K?Q?k?q?\"", fields[2])
+		} else {
+			board.CanCastle = castles
+		}
+	}
+
+	// Extract en passant square
+	if fields[3] != "-" {
+		if coord, ok := CoordFromString(fields[3]); !ok {
+			return nil, fmt.Errorf("invalid en passant string: %q, want \"([a-h])([1-8])\"", fields[3])
+		} else {
+			board.EnPassantTarget = coord
+		}
+	}
+
+	// Extract halfmove clock
+	if num, err := strconv.Atoi(fields[4]); err != nil || num < 0 || num > 50 {
+		return nil, fmt.Errorf("invalid halfmove clock: %v, want [0..50)", fields[4])
+	} else {
+		board.HalfmoveClock = num
+	}
+
+	// Extract fullmove counter
+	if num, err := strconv.Atoi(fields[5]); err != nil || num < 1 {
+		return nil, fmt.Errorf("invalid fullmove counter: %v, want [1..]", fields[5])
+	} else {
+		board.FullmoveCounter = num
+	}
+
+	return board, nil
+}
+
+func (board *Board) At(c Coord) *Piece {
+	return &board.squares[int(c.Rank())*8+int(c.File())]
 }
 func (board *Board) Flip() {
 	if board.Orientation == White {
@@ -126,61 +395,22 @@ func (board *Board) Flip() {
 		board.Orientation = White
 	}
 }
-func assembleFEN(board *Board, placement string) FEN {
-	moveSide := "w"
-	if board.SideToMove == Black {
-		moveSide = "b"
-	}
-
-	castleLetters := make([]string, 4)
-	if board.CanCastle[WKingside] {
-		castleLetters[0] = "K"
-	}
-	if board.CanCastle[WQueenside] {
-		castleLetters[1] = "Q"
-	}
-	if board.CanCastle[BKingside] {
-		castleLetters[2] = "k"
-	}
-	if board.CanCastle[BQueenside] {
-		castleLetters[3] = "q"
-	}
-	castlingAbility := strings.Join(castleLetters, "")
-	if castlingAbility == "" {
-		castlingAbility = "-"
-	}
-
-	enPassantTarget := "-"
-	if board.EnPassantTarget != NoCoord {
-		enPassantTarget = board.EnPassantTarget.String()
-	}
-
-	return FEN(fmt.Sprintf(
-		"%v %v %v %v %v %v",
-		placement,
-		moveSide,
-		castlingAbility,
-		enPassantTarget,
-		board.HalfmoveClock,
-		board.FullmoveCounter,
-	))
-}
-func (board *Board) ToFEN() (FEN, bool) {
-	placement := []string{}
+func (board *Board) FEN() string {
+	placement := bytes.Buffer{}
 
 	spaces := 0
 	for f, r := 0, 7; r >= 0; {
 		piece := board.squares[r*8+f]
-		if piece == NoPiece {
+		if piece.Type() == NoPiece {
 			spaces++
 		} else {
 			if pieceString := piece.String(); pieceString == "" {
-				return "", false
+				panic(fmt.Sprintf("unknown piece value found: %v", piece))
 			} else {
 				if spaces > 0 {
-					placement = append(placement, fmt.Sprint(spaces))
+					placement.WriteString(fmt.Sprint(spaces))
 				}
-				placement = append(placement, pieceString)
+				placement.WriteString(pieceString)
 				spaces = 0
 			}
 		}
@@ -191,17 +421,23 @@ func (board *Board) ToFEN() (FEN, bool) {
 			f = 0
 
 			if spaces > 0 {
-				placement = append(placement, fmt.Sprint(spaces))
+				placement.WriteString(fmt.Sprint(spaces))
 			}
 			if r >= 0 {
-				placement = append(placement, "/")
+				placement.WriteByte('/')
 			}
 			spaces = 0
 		}
 	}
 
-	return assembleFEN(board, strings.Join(placement, "")), true
+	epTarget := "-"
+	if board.EnPassantTarget != Coord(0) {
+		epTarget = board.EnPassantTarget.String()
+	}
+
+	return fmt.Sprintf("%v %v %v %v %v %v", placement.String(), board.SideToMove, board.CanCastle, epTarget, board.HalfmoveClock, board.FullmoveCounter)
 }
+
 func (board *Board) String() string {
 	hdiv := "+---+---+---+---+---+---+---+---+\n"
 	buf := bytes.Buffer{}
@@ -232,102 +468,27 @@ func (board *Board) String() string {
 		buf.WriteString(hdiv)
 	}
 
-	if board.Orientation == Black {
-		buf.WriteString("  h   g   f   e   d   c   b   a\n")
-	} else {
+	if board.Orientation == White {
 		buf.WriteString("  a   b   c   d   e   f   g   h\n")
+	} else {
+		buf.WriteString("  h   g   f   e   d   c   b   a\n")
 	}
 	return buf.String()
 }
 
-/*
- *
- *
- * FEN structure methods / functions
- */
-func (fen FEN) ToBoard() (*Board, error) {
-	board := EmptyBoard()
-	parts := strings.Split(string(fen), " ")
-	if len(parts) != 6 {
-		return nil, fmt.Errorf("not enough parts: %d, want 6", len(parts))
+func StartingPosition() *Board {
+	return &Board{
+		squares: [64]Piece{
+			NewPiece(White, Rook), NewPiece(White, Knight), NewPiece(White, Bishop), NewPiece(White, Queen), NewPiece(White, King), NewPiece(White, Bishop), NewPiece(White, Knight), NewPiece(White, Rook),
+			NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn),
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
+			NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
+		},
+		CanCastle:       [4]bool{true, true, true, true},
+		FullmoveCounter: 1,
 	}
-
-	f, r := 0, 7
-	for _, symbol := range parts[0] {
-		if unicode.IsDigit(symbol) {
-			f += int(symbol - '0')
-		} else {
-			piece := NewPiece(symbol)
-			if piece != NoPiece {
-				board.squares[r*8+f] = piece
-				f++
-			} else if symbol != '/' {
-				return nil, fmt.Errorf("unknown piece placement symbol: %q", symbol)
-			}
-		}
-
-		if f >= 8 {
-			f = 0
-			r--
-		}
-	}
-	if r >= 0 {
-		return nil, fmt.Errorf("not enough piece placement symbols")
-	}
-
-	switch parts[1] {
-	case "w":
-		board.SideToMove = White
-	case "b":
-		board.SideToMove = Black
-	default:
-		return nil, fmt.Errorf("unknown side to move: %q", parts[1])
-	}
-
-	if len(parts[2]) > 4 || len(parts[2]) < 1 {
-		return nil, fmt.Errorf("invalid castle character count: %d, want 1-4", len(parts[2]))
-	}
-	if parts[2] != "-" {
-		for _, symbol := range parts[2] {
-			switch {
-			case symbol == 'K' && !board.CanCastle[WKingside]:
-				board.CanCastle[WKingside] = true
-			case symbol == 'Q' && !board.CanCastle[WQueenside]:
-				board.CanCastle[WQueenside] = true
-			case symbol == 'k' && !board.CanCastle[BKingside]:
-				board.CanCastle[BKingside] = true
-			case symbol == 'q' && !board.CanCastle[BQueenside]:
-				board.CanCastle[BQueenside] = true
-			default:
-				return nil, fmt.Errorf("invalid castle character: %q, want \"|Q|k|q\"", symbol)
-			}
-		}
-	}
-
-	if parts[3] != "-" {
-		if len(parts[3]) != 2 {
-			return nil, fmt.Errorf("invalid en passant character count: %d, want 2 when not \"-\"", len(parts[3]))
-		}
-
-		coord := NewCoord(parts[3])
-		if !coord.IsValid() || (coord.Rank() != 2 && coord.Rank() != 5) {
-			return nil, fmt.Errorf("invalid en passant coord: [%01b] [%03b] [%03b] [%01b], want [0] [0..111] [0..111] [1]", (uint8(coord)&0x80)>>7, coord.File(), coord.Rank(), coord&1)
-		}
-
-		board.EnPassantTarget = coord
-	}
-
-	if num, err := strconv.Atoi(parts[4]); err != nil || num < 0 || num > 50 {
-		return nil, fmt.Errorf("invalid halfmove clock: %v, want [0..50)", parts[4])
-	} else {
-		board.HalfmoveClock = num
-	}
-
-	if num, err := strconv.Atoi(parts[5]); err != nil || num < 1 {
-		return nil, fmt.Errorf("invalid fullmove counter: %v, want [1..]", parts[5])
-	} else {
-		board.FullmoveCounter = num
-	}
-
-	return board, nil
 }

@@ -9,19 +9,19 @@ func TestPieceString(t *testing.T) {
 		piece Piece
 		want  string
 	}{
-		{Piece(White | Pawn), "P"},
-		{Piece(White | Knight), "N"},
-		{Piece(White | Bishop), "B"},
-		{Piece(White | Rook), "R"},
-		{Piece(White | Queen), "Q"},
-		{Piece(White | King), "K"},
+		{NewPiece(White, Pawn), "P"},
+		{NewPiece(White, Knight), "N"},
+		{NewPiece(White, Bishop), "B"},
+		{NewPiece(White, Rook), "R"},
+		{NewPiece(White, Queen), "Q"},
+		{NewPiece(White, King), "K"},
 
-		{Piece(Black | Pawn), "p"},
-		{Piece(Black | Knight), "n"},
-		{Piece(Black | Bishop), "b"},
-		{Piece(Black | Rook), "r"},
-		{Piece(Black | Queen), "q"},
-		{Piece(Black | King), "k"},
+		{NewPiece(Black, Pawn), "p"},
+		{NewPiece(Black, Knight), "n"},
+		{NewPiece(Black, Bishop), "b"},
+		{NewPiece(Black, Rook), "r"},
+		{NewPiece(Black, Queen), "q"},
+		{NewPiece(Black, King), "k"},
 	}
 
 	for _, test := range tests {
@@ -31,413 +31,327 @@ func TestPieceString(t *testing.T) {
 	}
 }
 
-func TestCoordIsValid(t *testing.T) {
-	for nc := 0; nc <= 1; nc++ {
-		for f := 0; f < 8; f++ {
-			for r := 0; r < 16; r++ {
-				coord := Coord((f << 4) | (r << 1) | nc)
-				want := nc == 1 && f < 8
-
-				if got := coord.IsValid(); got != want {
-					t.Errorf("Coord{%08b}.IsValid() = %v", uint8(coord), got)
-				}
-			}
-		}
-	}
-}
-
-func TestBoardGet(t *testing.T) {
+func TestBoardAt(t *testing.T) {
 	tests := []struct {
 		coord Coord
 		want  Piece
 	}{
-		{NewCoord("a1"), Piece(White | Rook)},
-		{NewCoord("b1"), Piece(White | Knight)},
-		{NewCoord("c1"), Piece(White | Bishop)},
-		{NewCoord("d1"), Piece(White | Queen)},
-		{NewCoord("e1"), Piece(White | King)},
-		{NewCoord("f1"), Piece(White | Bishop)},
-		{NewCoord("g1"), Piece(White | Knight)},
-		{NewCoord("h1"), Piece(White | Rook)},
+		{NewCoord(0, 0), NewPiece(White, Rook)},
+		{NewCoord(1, 0), NewPiece(White, Knight)},
+		{NewCoord(2, 0), NewPiece(White, Bishop)},
+		{NewCoord(3, 0), NewPiece(White, Queen)},
+		{NewCoord(4, 0), NewPiece(White, King)},
+		{NewCoord(5, 0), NewPiece(White, Bishop)},
+		{NewCoord(6, 0), NewPiece(White, Knight)},
+		{NewCoord(7, 0), NewPiece(White, Rook)},
 
-		{NewCoord("a8"), Piece(Black | Rook)},
-		{NewCoord("b8"), Piece(Black | Knight)},
-		{NewCoord("c8"), Piece(Black | Bishop)},
-		{NewCoord("d8"), Piece(Black | Queen)},
-		{NewCoord("e8"), Piece(Black | King)},
-		{NewCoord("f8"), Piece(Black | Bishop)},
-		{NewCoord("g8"), Piece(Black | Knight)},
-		{NewCoord("h8"), Piece(Black | Rook)},
+		{NewCoord(0, 7), NewPiece(Black, Rook)},
+		{NewCoord(1, 7), NewPiece(Black, Knight)},
+		{NewCoord(2, 7), NewPiece(Black, Bishop)},
+		{NewCoord(3, 7), NewPiece(Black, Queen)},
+		{NewCoord(4, 7), NewPiece(Black, King)},
+		{NewCoord(5, 7), NewPiece(Black, Bishop)},
+		{NewCoord(6, 7), NewPiece(Black, Knight)},
+		{NewCoord(7, 7), NewPiece(Black, Rook)},
 
-		{NewCoord("b2"), Piece(White | Pawn)},
-		{NewCoord("c3"), NoPiece},
-		{NewCoord("d4"), NoPiece},
-		{NewCoord("e5"), NoPiece},
-		{NewCoord("f6"), NoPiece},
-		{NewCoord("g7"), Piece(Black | Pawn)},
-
-		{NewCoord("F3"), NoPiece},
-		{NewCoord("a0"), NoPiece},
-		{NewCoord("h9"), NoPiece},
-		{NewCoord("1-1"), NoPiece},
+		{NewCoord(1, 1), NewPiece(White, Pawn)},
+		{NewCoord(2, 2), Piece(0)},
+		{NewCoord(3, 3), Piece(0)},
+		{NewCoord(4, 4), Piece(0)},
+		{NewCoord(5, 5), Piece(0)},
+		{NewCoord(6, 6), NewPiece(Black, Pawn)},
 	}
 
-	board := NewBoard()
+	board := StartingPosition()
 	for _, test := range tests {
-		if got := board.Get(test.coord); got != test.want {
+		if got := board.At(test.coord); *got != test.want {
 			t.Errorf("Board.Get(Coord{%d, %d}) = %v, want %v", test.coord.File(), test.coord.Rank(), got, test.want)
 		}
 	}
 }
 
-func TestBoardSet(t *testing.T) {
-	tests := []struct {
-		coord     Coord
-		realIndex int
-		want      Piece
-	}{
-		{NewCoord("a1"), 0, Piece(White | Rook)},
-		{NewCoord("b1"), 1, Piece(White | Knight)},
-		{NewCoord("c1"), 2, Piece(White | Bishop)},
-		{NewCoord("d1"), 3, Piece(White | Queen)},
-		{NewCoord("e1"), 4, Piece(White | King)},
-		{NewCoord("f1"), 5, Piece(White | Bishop)},
-		{NewCoord("g1"), 6, Piece(White | Knight)},
-		{NewCoord("h1"), 7, Piece(White | Rook)},
+// func TestBoardMakeMove(t *testing.T) {
+// 	sequence := []struct {
+// 		start, target Coord
+// 		legal         bool
+// 	}{
+// 		{CoordFromString("d2"), CoordFromString("d4"), true},
+// 		{CoordFromString("d7"), CoordFromString("d5"), true},
+// 		{CoordFromString("e2"), CoordFromString("e4"), true},
+// 		{CoordFromString("d5"), CoordFromString("e4"), true},
+// 		{CoordFromString("c1"), CoordFromString("f4"), true},
+// 		{CoordFromString("g8"), CoordFromString("f6"), true},
+// 		{CoordFromString("b1"), CoordFromString("d2"), true},
+// 		{CoordFromString("e8"), CoordFromString("d7"), true},
+// 		{CoordFromString("e1"), CoordFromString("d1"), false},
 
-		{NewCoord("a8"), 56, Piece(Black | Rook)},
-		{NewCoord("b8"), 57, Piece(Black | Knight)},
-		{NewCoord("c8"), 58, Piece(Black | Bishop)},
-		{NewCoord("d8"), 59, Piece(Black | Queen)},
-		{NewCoord("e8"), 60, Piece(Black | King)},
-		{NewCoord("f8"), 61, Piece(Black | Bishop)},
-		{NewCoord("g8"), 62, Piece(Black | Knight)},
-		{NewCoord("h8"), 63, Piece(Black | Rook)},
+// 		{CoordFromString("c6"), CoordFromString("f4"), false}, // move nil to non-nil
+// 		{CoordFromString("c5"), CoordFromString("c4"), false}, // move nil to nil
+// 		{CoordFromString("a0"), CoordFromString("f4"), false}, // invalid start
+// 		{CoordFromString("a1"), CoordFromString("f0"), false}, // invalid end
+// 	}
 
-		{NewCoord("b2"), 9, Piece(White | Pawn)},
-		{NewCoord("c3"), 18, NoPiece},
-		{NewCoord("d4"), 27, NoPiece},
-		{NewCoord("e5"), 36, NoPiece},
-		{NewCoord("f6"), 45, NoPiece},
-		{NewCoord("g7"), 54, Piece(Black | Pawn)},
+// 	board := NewBoard()
+// 	for _, move := range sequence {
+// 		if got := board.MakeMove(Move{move.start, move.target}); got != move.legal {
+// 			t.Errorf("Move{Start: %q, Target: %q} legal: %v, want %v", move.start, move.target, got, move.legal)
+// 		}
+// 	}
 
-		{NewCoord("F3"), 21, NoPiece},
-		{NewCoord("a0"), 21, NoPiece},
-		{NewCoord("h9"), 21, NoPiece},
-		{NewCoord("1-1"), 21, NoPiece},
-	}
+// 	want := Board{
+// 		squares: [64]Piece{
+// 			NewPiece(White, Rook), NewPiece(White, Knight), Piece(0), NewPiece(White, Queen), NewPiece(White, King), NewPiece(White, Bishop), NewPiece(White, Knight), NewPiece(White, Rook),
+// 			NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn),
+// 			Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+// 			Piece(0), Piece(0), Piece(0), NewPiece(White, Pawn), NewPiece(Black, Pawn), NewPiece(White, Bishop), Piece(0), Piece(0),
+// 			Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+// 			Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+// 			NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), Piece(0), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
+// 			NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
+// 		},
+// 	}
 
-	board := EmptyBoard()
-	for _, test := range tests {
-		board.Set(test.coord, test.want)
-		if got := board.squares[test.realIndex]; got != test.want {
-			t.Errorf("Board.Get(%q) = %v, want %v", test.coord, got, test.want)
-		}
-	}
-}
-
-func TestBoardMakeMove(t *testing.T) {
-	sequence := []struct {
-		start, target Coord
-		legal         bool
-	}{
-		{NewCoord("d2"), NewCoord("d4"), true},
-		{NewCoord("d7"), NewCoord("d5"), true},
-		{NewCoord("e2"), NewCoord("e4"), true},
-		{NewCoord("d5"), NewCoord("e4"), true},
-		{NewCoord("c1"), NewCoord("f4"), true},
-		{NewCoord("g8"), NewCoord("f6"), true},
-		{NewCoord("b1"), NewCoord("d2"), true},
-		{NewCoord("e8"), NewCoord("d7"), true},
-		{NewCoord("e1"), NewCoord("d1"), false},
-
-		{NewCoord("c6"), NewCoord("f4"), false}, // move nil to non-nil
-		{NewCoord("c5"), NewCoord("c4"), false}, // move nil to nil
-		{NewCoord("a0"), NewCoord("f4"), false}, // invalid start
-		{NewCoord("a1"), NewCoord("f0"), false}, // invalid end
-	}
-
-	board := NewBoard()
-	for _, move := range sequence {
-		if got := board.MakeMove(Move{move.start, move.target}); got != move.legal {
-			t.Errorf("Move{Start: %q, Target: %q} legal: %v, want %v", move.start, move.target, got, move.legal)
-		}
-	}
-
-	want := Board{
-		squares: [64]Piece{
-			Piece(White | Rook), Piece(White | Knight), NoPiece, Piece(White | Queen), Piece(White | King), Piece(White | Bishop), Piece(White | Knight), Piece(White | Rook),
-			Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), NoPiece, NoPiece, Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn),
-			NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-			NoPiece, NoPiece, NoPiece, Piece(White | Pawn), Piece(Black | Pawn), Piece(White | Bishop), NoPiece, NoPiece,
-			NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-			NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-			Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), NoPiece, Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn),
-			Piece(Black | Rook), Piece(Black | Knight), Piece(Black | Bishop), Piece(Black | Queen), Piece(Black | King), Piece(Black | Bishop), Piece(Black | Knight), Piece(Black | Rook),
-		},
-	}
-
-	for i := 0; i < len(board.squares); i++ {
-		if board.squares[i] != want.squares[i] {
-			t.Log(board)
-			t.Errorf("board[%d] = %v, want %v", i, board.squares[i], want.squares[i])
-			break
-		}
-	}
-}
+// 	for i := 0; i < len(board.squares); i++ {
+// 		if board.squares[i] != want.squares[i] {
+// 			t.Log(board)
+// 			t.Errorf("board[%d] = %v, want %v", i, board.squares[i], want.squares[i])
+// 			break
+// 		}
+// 	}
+// }
 
 func TestBoardToFEN(t *testing.T) {
 	tests := []struct {
 		board *Board
-		want  FEN
+		want  string
 	}{
 		{
-			NewBoard(),
-			FEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
+			StartingPosition(),
+			"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, Piece(White | Pawn), Piece(White | Pawn), NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | Knight), NoPiece, NoPiece, Piece(Black | Pawn),
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Knight), Piece(0), Piece(0), NewPiece(Black, Pawn),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 				},
 				CanCastle:       [4]bool{false, false, false, false},
 				FullmoveCounter: 1,
 			},
-			FEN("8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 0 1"),
+			"8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(White | Rook), NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, Piece(White | Rook),
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					Piece(Black | Rook), NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				CanCastle:       [4]bool{true, true, false, true},
 				FullmoveCounter: 1,
 			},
-			FEN("r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1"),
+			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(White | Rook), NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, Piece(White | Rook),
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				CanCastle:       [4]bool{true, true, false, false},
 				FullmoveCounter: 1,
 			},
-			FEN("4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1"),
+			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(White | Rook), NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
 				CanCastle:       [4]bool{false, true, false, false},
 				FullmoveCounter: 1,
 			},
-			FEN("4k3/8/8/8/8/8/8/R3K3 b Q - 0 1"),
+			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
 				CanCastle:       [4]bool{false, false, false, false},
 				FullmoveCounter: 1,
 			},
-			FEN("4k3/8/8/8/8/8/8/4K3 b - - 0 1"),
+			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
 		},
 	}
 
 	for _, test := range tests {
-		if got, ok := test.board.ToFEN(); !ok || got != test.want {
-			t.Errorf("Board.ToFEN() = %q, want %q", got, test.want)
+		if got := test.board.FEN(); got != test.want {
+			t.Errorf("Board.FEN() = %q, want %q", got, test.want)
 		}
-	}
-}
-
-func TestBoardString(t *testing.T) {
-	board := NewBoard()
-	want := `r n b q k b n r  8
-p p p p p p p p  7
-. . . . . . . .  6
-. . . . . . . .  5
-. . . . . . . .  4
-. . . . . . . .  3
-P P P P P P P P  2
-R N B Q K B N R  1
-a b c d e f g h`
-
-	board.MakeMove(Move{NewCoord("e2"), NewCoord("e4")})
-	board.MakeMove(Move{NewCoord("d7"), NewCoord("d5")})
-	board.Flip()
-	if got := board.String(); got != want {
-		t.Errorf("Board.String() =\n%v, want\n%v", got, want)
 	}
 }
 
 func TestFENToBoard(t *testing.T) {
 	tests := []struct {
 		want *Board
-		fen  FEN
+		fen  string
 	}{
 		{
-			NewBoard(),
-			FEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
+			StartingPosition(),
+			"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, Piece(White | Pawn), Piece(White | Pawn), NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | Knight), NoPiece, NoPiece, Piece(Black | Pawn),
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Knight), Piece(0), Piece(0), NewPiece(Black, Pawn),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 				},
 				CanCastle:       [4]bool{false, false, false, false},
 				HalfmoveClock:   5,
 				FullmoveCounter: 13,
 			},
-			FEN("8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 5 13"),
+			"8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 5 13",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(White | Rook), NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, Piece(White | Rook),
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					Piece(Black | Rook), NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				CanCastle:       [4]bool{true, true, false, true},
 				FullmoveCounter: 1,
 			},
-			FEN("r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1"),
+			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(White | Rook), NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, Piece(White | Rook),
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				CanCastle:       [4]bool{true, true, false, false},
 				FullmoveCounter: 1,
 			},
-			FEN("4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1"),
+			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(White | Rook), NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
 				CanCastle:       [4]bool{false, true, false, false},
 				FullmoveCounter: 1,
 			},
-			FEN("4k3/8/8/8/8/8/8/R3K3 b Q - 0 1"),
+			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(White | King), NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | King), NoPiece, NoPiece, NoPiece,
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
 				CanCastle:       [4]bool{false, false, false, false},
 				FullmoveCounter: 1,
 			},
-			FEN("4k3/8/8/8/8/8/8/4K3 b - - 0 1"),
+			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
 		},
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(White | Rook), Piece(White | Knight), Piece(White | Bishop), Piece(White | Queen), Piece(White | King), Piece(White | Bishop), Piece(White | Knight), Piece(White | Rook),
-					Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), NoPiece, Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn), Piece(White | Pawn),
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, Piece(White | Pawn), Piece(Black | Pawn), NoPiece, NoPiece, NoPiece,
-					NoPiece, NoPiece, NoPiece, NoPiece, NoPiece, Piece(Black | Pawn), NoPiece, NoPiece,
-					Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), Piece(Black | Pawn), NoPiece, NoPiece, Piece(Black | Pawn), Piece(Black | Pawn),
-					Piece(Black | Rook), Piece(Black | Knight), Piece(Black | Bishop), Piece(Black | Queen), Piece(Black | King), Piece(Black | Bishop), Piece(Black | Knight), Piece(Black | Rook),
+					NewPiece(White, Rook), NewPiece(White, Knight), NewPiece(White, Bishop), NewPiece(White, Queen), NewPiece(White, King), NewPiece(White, Bishop), NewPiece(White, Knight), NewPiece(White, Rook),
+					NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), NewPiece(White, Pawn), NewPiece(Black, Pawn), Piece(0), Piece(0), Piece(0),
+					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Pawn), Piece(0), Piece(0),
+					NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), Piece(0), Piece(0), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
+					NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
 				},
 				CanCastle:       [4]bool{true, true, true, true},
-				EnPassantTarget: NewCoord("e6"),
+				EnPassantTarget: NewCoord(4, 5),
 				FullmoveCounter: 3,
 			},
-			FEN("rnbqkbnr/pppp2pp/5p2/3Pp3/8/8/PPP1PPPP/RNBQKBNR w KQkq e6 0 3"),
+			"rnbqkbnr/pppp2pp/5p2/3Pp3/8/8/PPP1PPPP/RNBQKBNR w KQkq e6 0 3",
 		},
 		{
 			nil,
-			FEN("1p a b c d e"),
+			"1p a b c d e",
 		},
 		{
 			nil,
-			FEN("1 2 3 4 5"),
+			"1 2 3 4 5",
 		},
 	}
 
 	for _, test := range tests {
-		got, err := test.fen.ToBoard()
+		got, err := BoardFromString(test.fen)
 
 		if got == nil || test.want == nil {
 			if got != test.want {
