@@ -420,8 +420,7 @@ func TestCoord(t *testing.T) {
 }
 
 func TestMoveGen(t *testing.T) {
-	board, _ := BoardFromString("8/8/8/8/4p3/8/3P4/8 w - - 0 1")
-	t.Errorf("\n%v\nSideToMove: %v", board, board.SideToMove)
-	board.MakeMove(NewMove(NewCoord(3, 1), NewCoord(3, 3)))
-	t.Errorf("\n%v", board.FEN())
+	board, _ := BoardFromString("8/8/8/8/8/3b4/8/4K2R w - - 0 1")
+	moves := board.GenMoves()
+	t.Errorf("\n%v", moves)
 }

@@ -1,5 +1,7 @@
 package chess
 
+import "fmt"
+
 func (board *Board) genPawnMoves(pieces []int) []Move {
 	moveSet := make([]Move, 0, 16)
 
@@ -26,7 +28,7 @@ func (board *Board) genPawnMoves(pieces []int) []Move {
 		}
 		for off := 3; off > 0; off -= 2 {
 			end := NewCoord(start.File()+off-2, start.Rank()+dir)
-			if end != NoCoord && *board.At(end) != NoPiece && board.At(end).Color() != piece.Color() || board.EnPassantTarget == end {
+			if end != NoCoord && (*board.At(end) != NoPiece && board.At(end).Color() != piece.Color() || board.EnPassantTarget == end) {
 				moveSet = append(moveSet, NewMove(start, end))
 			}
 		}
@@ -145,19 +147,68 @@ func (board *Board) genPseudoMoves() []Move {
 	moveSet = append(moveSet, board.genKingMoves(pieces)...)
 	return moveSet
 }
-func (board *Board) GenMoves() []Move {
-	moveSet := board.genPseudoMoves()
+func (board *Board) kingIsCapturable() bool {
+	moves := board.genPseudoMoves()
 
-	for _, move := range moveSet {
-		board.MakeMove(move)
-		board.genPseudoMoves()
+	for _, move := range moves {
+		if board.At(move.End).Type() == King {
+			return true
+		}
+	}
+
+	return false
+}
+func (board *Board) GenMoves() []Move {
+	pseudoMoves := board.genPseudoMoves()
+	moveSet := make([]Move, 0, len(pseudoMoves))
+
+	for _, move := range pseudoMoves {
+		isLegal := true
+
+		if diff := move.Start.File() - move.End.File(); board.At(move.Start).Type() == King && diff/2 != 0 {
+			tempBoard := *board
+			tempBoard.SideToMove ^= 0b11
+			if !tempBoard.kingIsCapturable() {
+				tempBoard.SideToMove = board.SideToMove
+				tempBoard.MakeMove(NewMove(move.Start, NewCoord(move.End.File()+diff/2, move.End.Rank())))
+
+				if tempBoard.kingIsCapturable() {
+					isLegal = false
+				}
+			} else {
+				isLegal = false
+			}
+		}
+
+		if isLegal {
+			tempBoard := *board
+			if !tempBoard.MakeMove(move) {
+				panic(fmt.Sprintf("invalid move generated: %v", move))
+			}
+
+			if tempBoard.kingIsCapturable() {
+				isLegal = false
+			}
+		}
+
+		if isLegal {
+			moveSet = append(moveSet, move)
+		}
 	}
 
 	return moveSet
 }
 
 func (board *Board) IsLegal(move Move) bool {
-	return true
+	legalMoves := board.GenMoves()
+
+	for _, legal := range legalMoves {
+		if move == legal {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (board *Board) MakeMove(move Move) bool {
@@ -187,7 +238,7 @@ func (board *Board) MakeMove(move Move) bool {
 	board.EnPassantTarget = NoCoord
 	if diff := move.Start.Rank() - move.End.Rank(); piece.Type() == Pawn && diff/2 != 0 {
 		left, right := board.At(NewCoord(move.End.File()+1, move.End.Rank())), board.At(NewCoord(move.End.File()-1, move.End.Rank()))
-		if (left.Type() == Pawn && left.Color() != piece.Color()) || (right.Type() == Pawn && right.Color() != piece.Color()) {
+		if (left != nil && left.Type() == Pawn && left.Color() != piece.Color()) || (right != nil && right.Type() == Pawn && right.Color() != piece.Color()) {
 			board.EnPassantTarget = NewCoord(move.End.File(), move.End.Rank()+diff/2)
 		}
 	}
