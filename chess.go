@@ -115,12 +115,21 @@ func (board *Board) genKingMoves(pieces []int) []Move {
 			}
 		}
 
+		checkCastle := func(side CastleSide, dir int) {
+			between, end := NewCoord(start.File()+1*dir, start.Rank()), NewCoord(start.File()+2*dir, start.Rank())
+			if board.CastleRights.Can(piece.Color(), side) && *board.At(between) == NoPiece && *board.At(end) == NoPiece {
+				moveSet = append(moveSet, NewMove(start, end))
+			}
+		}
+		checkCastle(Kingside, 1)
+		checkCastle(Queenside, -1)
+
 		break
 	}
 
 	return moveSet
 }
-func (board *Board) GenMoves() []Move {
+func (board *Board) genPseudoMoves() []Move {
 	moveSet := make([]Move, 0, 128)
 
 	pieces := make([]int, 0, 16)
@@ -136,23 +145,61 @@ func (board *Board) GenMoves() []Move {
 	moveSet = append(moveSet, board.genKingMoves(pieces)...)
 	return moveSet
 }
+func (board *Board) GenMoves() []Move {
+	moveSet := board.genPseudoMoves()
+
+	for _, move := range moveSet {
+		board.MakeMove(move)
+		board.genPseudoMoves()
+	}
+
+	return moveSet
+}
+
+func (board *Board) IsLegal(move Move) bool {
+	return true
+}
 
 func (board *Board) MakeMove(move Move) bool {
-	piece := board.At(move.Start)
-	capture := *board.At(move.End) != NoPiece
-	pawnMove := piece.Type() == Pawn
+	if move.Start == NoCoord || move.End == NoCoord {
+		return false
+	}
 
-	*board.At(move.End) = *piece
-	*board.At(move.Start) = Piece(0)
+	piece := *board.At(move.Start)
+	resetHClock := *board.At(move.End) != NoPiece || piece.Type() == Pawn
 
-	board.SideToMove ^= 1
+	*board.At(move.End) = piece
+	*board.At(move.Start) = NoPiece
+	if diff := move.Start.File() - move.End.File(); piece.Type() == King && diff/2 != 0 {
+		var corner Coord
+		if diff < 0 { // kingside castle
+			corner = NewCoord(7, move.End.Rank())
+		} else { // queenside castle
+			corner = NewCoord(0, move.End.Rank())
+		}
+
+		*board.At(NewCoord(move.End.File()+diff/2, move.End.Rank())) = *board.At(corner)
+		*board.At(corner) = NoPiece
+	} else if piece.Type() == Pawn && move.End == board.EnPassantTarget {
+		*board.At(NewCoord(move.End.File(), move.Start.Rank())) = NoPiece
+	}
+
+	board.EnPassantTarget = NoCoord
+	if diff := move.Start.Rank() - move.End.Rank(); piece.Type() == Pawn && diff/2 != 0 {
+		left, right := board.At(NewCoord(move.End.File()+1, move.End.Rank())), board.At(NewCoord(move.End.File()-1, move.End.Rank()))
+		if (left.Type() == Pawn && left.Color() != piece.Color()) || (right.Type() == Pawn && right.Color() != piece.Color()) {
+			board.EnPassantTarget = NewCoord(move.End.File(), move.End.Rank()+diff/2)
+		}
+	}
+
+	board.SideToMove ^= 0b11
 	if piece.Color() == Black {
 		board.FullmoveCounter++
 	}
-	if !capture && !pawnMove {
-		board.HalfmoveClock++
-	} else {
+	if resetHClock {
 		board.HalfmoveClock = 0
+	} else {
+		board.HalfmoveClock++
 	}
 
 	return true

@@ -233,35 +233,28 @@ func (m Move) String() string {
 
 type CastleSide uint8
 
+const (
+	Kingside CastleSide = iota
+	Queenside
+)
+
 // Castle Structure
 type Castles [4]bool
 
-const (
-	WhiteKingside CastleSide = iota
-	WhiteQueenside
-	BlackKingside
-	BlackQueenside
-)
-
-func NewCastles(sides ...CastleSide) (castles Castles) {
-	for _, s := range sides {
-		if int(s) < len(castles) {
-			castles[s] = true
-		}
-	}
+func NewCastles() (castles Castles) {
 	return
 }
 func CastlesFromString(s string) (castles Castles, ok bool) {
 	for _, symbol := range s {
 		switch {
-		case symbol == 'K' && !castles[WhiteKingside]:
-			castles[WhiteKingside] = true
-		case symbol == 'Q' && !castles[WhiteQueenside]:
-			castles[WhiteQueenside] = true
-		case symbol == 'k' && !castles[BlackKingside]:
-			castles[BlackKingside] = true
-		case symbol == 'q' && !castles[BlackQueenside]:
-			castles[BlackQueenside] = true
+		case symbol == 'K' && !castles.Can(White, Kingside):
+			castles.Allow(White, Kingside)
+		case symbol == 'Q' && !castles.Can(White, Queenside):
+			castles.Allow(White, Queenside)
+		case symbol == 'k' && !castles.Can(Black, Kingside):
+			castles.Allow(Black, Kingside)
+		case symbol == 'q' && !castles.Can(Black, Queenside):
+			castles.Allow(Black, Queenside)
 		default:
 			return castles, false
 		}
@@ -269,19 +262,35 @@ func CastlesFromString(s string) (castles Castles, ok bool) {
 
 	return castles, true
 }
-func (c Castles) String() string {
+
+func (c *Castles) Allow(sc SideColor, side CastleSide) {
+	if (sc != White && sc != Black) || (side != Kingside && side != Queenside) {
+		return
+	}
+
+	c[uint(sc&0b10)|uint(side)] = true
+}
+func (c *Castles) Can(sc SideColor, side CastleSide) bool {
+	if (sc != White && sc != Black) || (side != Kingside && side != Queenside) {
+		return false
+	}
+
+	return c[uint(sc&0b10)|uint(side)]
+}
+
+func (c *Castles) String() string {
 	buf := bytes.Buffer{}
 
-	if c[WhiteKingside] {
+	if c.Can(White, Kingside) {
 		buf.WriteByte('K')
 	}
-	if c[WhiteQueenside] {
+	if c.Can(White, Queenside) {
 		buf.WriteByte('Q')
 	}
-	if c[BlackKingside] {
+	if c.Can(Black, Kingside) {
 		buf.WriteByte('k')
 	}
-	if c[BlackQueenside] {
+	if c.Can(Black, Queenside) {
 		buf.WriteByte('q')
 	}
 
@@ -310,7 +319,7 @@ type Board struct {
 	Orientation SideColor
 
 	SideToMove      SideColor
-	CanCastle       Castles
+	CastleRights    Castles
 	EnPassantTarget Coord
 	HalfmoveClock   int
 	FullmoveCounter int
@@ -318,6 +327,7 @@ type Board struct {
 
 func NewBoard() *Board {
 	board := new(Board)
+	board.Orientation = White
 	board.SideToMove = White
 	board.FullmoveCounter = 1
 
@@ -373,7 +383,7 @@ func BoardFromString(fen string) (*Board, error) {
 		if castles, ok := CastlesFromString(fields[2]); !ok {
 			return nil, fmt.Errorf("invalid castle string: %q, want \"-|K?Q?k?q?\"", fields[2])
 		} else {
-			board.CanCastle = castles
+			board.CastleRights = castles
 		}
 	}
 
@@ -404,6 +414,9 @@ func BoardFromString(fen string) (*Board, error) {
 }
 
 func (board *Board) At(c Coord) *Piece {
+	if c == NoCoord {
+		return nil
+	}
 	return &board.squares[c.index()]
 }
 func (board *Board) Flip() {
@@ -453,7 +466,7 @@ func (board *Board) FEN() string {
 		epTarget = board.EnPassantTarget.String()
 	}
 
-	return fmt.Sprintf("%v %v %v %v %v %v", placement.String(), board.SideToMove, board.CanCastle, epTarget, board.HalfmoveClock, board.FullmoveCounter)
+	return fmt.Sprintf("%v %v %v %v %v %v", placement.String(), board.SideToMove, board.CastleRights.String(), epTarget, board.HalfmoveClock, board.FullmoveCounter)
 }
 
 func (board *Board) String() string {
@@ -482,7 +495,7 @@ func (board *Board) String() string {
 			buf.Write(chars)
 		}
 
-		buf.WriteString(fmt.Sprintf("|  %d\n", r+1))
+		buf.WriteString(fmt.Sprintf("|  %d\n", rank+1))
 		buf.WriteString(hdiv)
 	}
 
@@ -506,8 +519,9 @@ func StartingPosition() *Board {
 			NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
 			NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
 		},
+		Orientation:     White,
 		SideToMove:      White,
-		CanCastle:       [4]bool{true, true, true, true},
+		CastleRights:    [4]bool{true, true, true, true},
 		FullmoveCounter: 1,
 	}
 }

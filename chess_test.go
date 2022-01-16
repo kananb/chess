@@ -142,7 +142,7 @@ func TestBoardToFEN(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      White,
-				CanCastle:       [4]bool{false, false, false, false},
+				CastleRights:    [4]bool{false, false, false, false},
 				FullmoveCounter: 1,
 			},
 			"8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 0 1",
@@ -160,7 +160,7 @@ func TestBoardToFEN(t *testing.T) {
 					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      White,
-				CanCastle:       [4]bool{true, true, false, true},
+				CastleRights:    [4]bool{true, true, false, true},
 				FullmoveCounter: 1,
 			},
 			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
@@ -178,7 +178,7 @@ func TestBoardToFEN(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      White,
-				CanCastle:       [4]bool{true, true, false, false},
+				CastleRights:    [4]bool{true, true, false, false},
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
@@ -196,7 +196,7 @@ func TestBoardToFEN(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
-				CanCastle:       [4]bool{false, true, false, false},
+				CastleRights:    [4]bool{false, true, false, false},
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
@@ -214,7 +214,7 @@ func TestBoardToFEN(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
-				CanCastle:       [4]bool{false, false, false, false},
+				CastleRights:    [4]bool{false, false, false, false},
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
@@ -250,7 +250,7 @@ func TestFENToBoard(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      White,
-				CanCastle:       [4]bool{false, false, false, false},
+				CastleRights:    [4]bool{false, false, false, false},
 				HalfmoveClock:   5,
 				FullmoveCounter: 13,
 			},
@@ -269,7 +269,7 @@ func TestFENToBoard(t *testing.T) {
 					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      White,
-				CanCastle:       [4]bool{true, true, false, true},
+				CastleRights:    [4]bool{true, true, false, true},
 				FullmoveCounter: 1,
 			},
 			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
@@ -287,7 +287,7 @@ func TestFENToBoard(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      White,
-				CanCastle:       [4]bool{true, true, false, false},
+				CastleRights:    [4]bool{true, true, false, false},
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
@@ -305,7 +305,7 @@ func TestFENToBoard(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
-				CanCastle:       [4]bool{false, true, false, false},
+				CastleRights:    [4]bool{false, true, false, false},
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
@@ -323,7 +323,7 @@ func TestFENToBoard(t *testing.T) {
 					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
 				},
 				SideToMove:      Black,
-				CanCastle:       [4]bool{false, false, false, false},
+				CastleRights:    [4]bool{false, false, false, false},
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
@@ -341,7 +341,7 @@ func TestFENToBoard(t *testing.T) {
 					NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
 				},
 				SideToMove:      White,
-				CanCastle:       [4]bool{true, true, true, true},
+				CastleRights:    [4]bool{true, true, true, true},
 				EnPassantTarget: NewCoord(4, 5),
 				FullmoveCounter: 3,
 			},
@@ -379,8 +379,8 @@ func TestFENToBoard(t *testing.T) {
 			// check metadata
 			if got.SideToMove != test.want.SideToMove {
 				t.Errorf("BoardFromString(%q).SideToMove = %v, want %v", test.fen, got.SideToMove, test.want.SideToMove)
-			} else if got.CanCastle != test.want.CanCastle {
-				t.Errorf("BoardFromString(%q).CanCastle = %v, want %v", test.fen, got.CanCastle, test.want.CanCastle)
+			} else if got.CastleRights != test.want.CastleRights {
+				t.Errorf("BoardFromString(%q).CastleRights = %v, want %v", test.fen, got.CastleRights, test.want.CastleRights)
 			} else if got.EnPassantTarget != test.want.EnPassantTarget {
 				t.Errorf("BoardFromString(%q).EnPassantTarget = %v, want %v", test.fen, got.EnPassantTarget, test.want.EnPassantTarget)
 			} else if got.HalfmoveClock != test.want.HalfmoveClock {
@@ -419,10 +419,9 @@ func TestCoord(t *testing.T) {
 	}
 }
 
-func TestPawnMoveGen(t *testing.T) {
-	board, _ := BoardFromString("8/8/8/bbbbbbbb/8/8/8/8 b KQkq - 0 1")
-	t.Logf("\n%v", board)
-	moves := board.GenMoves()
-
-	t.Error(len(moves))
+func TestMoveGen(t *testing.T) {
+	board, _ := BoardFromString("8/8/8/8/4p3/8/3P4/8 w - - 0 1")
+	t.Errorf("\n%v\nSideToMove: %v", board, board.SideToMove)
+	board.MakeMove(NewMove(NewCoord(3, 1), NewCoord(3, 3)))
+	t.Errorf("\n%v", board.FEN())
 }
