@@ -2,6 +2,34 @@ package chess
 
 import "fmt"
 
+var slideDirections = [...]struct{ f, r int }{
+	{1, 1}, {1, -1}, {-1, -1}, {-1, 1},
+	{0, 1}, {1, 0}, {0, -1}, {-1, 0},
+}
+var knightOffsets = [...]struct{ f, r int }{
+	{1, 2}, {2, 1}, {2, -1}, {1, -2},
+	{-1, -2}, {-2, -1}, {-2, 1}, {-1, 2},
+}
+
+func (board *Board) getPieceIndices(types ...PieceType) []int {
+	pieces := make([]int, 0, 16)
+
+	for i := 0; i < len(board.squares); i++ {
+		if board.squares[i].Color() == board.SideToMove {
+			if len(types) == 0 {
+				pieces = append(pieces, i)
+			}
+			for _, t := range types {
+				if board.squares[i].Type() == t {
+					pieces = append(pieces, i)
+					break
+				}
+			}
+		}
+	}
+
+	return pieces
+}
 func (board *Board) genPawnMoves(pieces []int) []Move {
 	moveSet := make([]Move, 0, 16)
 
@@ -15,21 +43,25 @@ func (board *Board) genPawnMoves(pieces []int) []Move {
 			continue
 		}
 
-		start := coordFromIndex(i)
-		end := NewCoord(start.File(), start.Rank()+dir)
-		if end != NoCoord && *board.At(end) == NoPiece {
-			moveSet = append(moveSet, NewMove(start, end))
+		from := coordFromIndex(i)
+		to := NewCoord(from.File(), from.Rank()+dir)
+		if to != NoCoord && *board.At(to) == NoPiece {
+			promotes := NoType
+			if to.Rank() == 0 || to.Rank() == 7 {
+				promotes = Queen
+			}
+			moveSet = append(moveSet, NewMove(from, to, MoveFlags{Moves: Pawn, Promotes: promotes}))
 
-			end = NewCoord(start.File(), start.Rank()+dir*2)
-			canMoveDouble := (piece.Color() == White && start.Rank() == 1) || (piece.Color() == Black && start.Rank() == 6)
-			if end != NoCoord && canMoveDouble && *board.At(end) == NoPiece {
-				moveSet = append(moveSet, NewMove(start, end))
+			to = NewCoord(from.File(), from.Rank()+dir*2)
+			canMoveDouble := (piece.Color() == White && from.Rank() == 1) || (piece.Color() == Black && from.Rank() == 6)
+			if to != NoCoord && canMoveDouble && *board.At(to) == NoPiece {
+				moveSet = append(moveSet, NewMove(from, to, MoveFlags{Moves: Pawn}))
 			}
 		}
 		for off := 3; off > 0; off -= 2 {
-			end := NewCoord(start.File()+off-2, start.Rank()+dir)
-			if end != NoCoord && (*board.At(end) != NoPiece && board.At(end).Color() != piece.Color() || board.EnPassantTarget == end) {
-				moveSet = append(moveSet, NewMove(start, end))
+			to := NewCoord(from.File()+off-2, from.Rank()+dir)
+			if to != NoCoord && (*board.At(to) != NoPiece && board.At(to).Color() != piece.Color() || board.EnPassantTarget == to) {
+				moveSet = append(moveSet, NewMove(from, to, MoveFlags{Moves: Pawn, Captures: board.At(to).Type()}))
 			}
 		}
 	}
@@ -45,12 +77,11 @@ func (board *Board) genKnightMoves(pieces []int) []Move {
 			continue
 		}
 
-		start := coordFromIndex(i)
-		offsets := [...]struct{ f, r int }{{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}}
-		for _, off := range offsets {
-			end := NewCoord(start.File()+off.f, start.Rank()+off.r)
-			if end != NoCoord && board.At(end).Color() != piece.Color() {
-				moveSet = append(moveSet, NewMove(start, end))
+		from := coordFromIndex(i)
+		for _, off := range knightOffsets {
+			to := NewCoord(from.File()+off.f, from.Rank()+off.r)
+			if to != NoCoord && board.At(to).Color() != piece.Color() {
+				moveSet = append(moveSet, NewMove(from, to, MoveFlags{Moves: Knight, Captures: board.At(to).Type()}))
 			}
 		}
 	}
@@ -59,10 +90,6 @@ func (board *Board) genKnightMoves(pieces []int) []Move {
 }
 func (board *Board) genSlidingMoves(pieces []int) []Move {
 	moveSet := make([]Move, 0, 128)
-	slideDirections := [...]struct{ f, r int }{
-		{1, 1}, {1, -1}, {-1, -1}, {-1, 1},
-		{0, 1}, {1, 0}, {0, -1}, {-1, 0},
-	}
 
 	for _, i := range pieces {
 		piece := board.squares[i]
@@ -80,16 +107,16 @@ func (board *Board) genSlidingMoves(pieces []int) []Move {
 			directions = slideDirections[:]
 		}
 
-		start := coordFromIndex(i)
+		from := coordFromIndex(i)
 		for _, dir := range directions {
 			for off := 1; ; off++ {
-				end := NewCoord(start.File()+dir.f*off, start.Rank()+dir.r*off)
-				if end == NoCoord || board.At(end).Color() == piece.Color() {
+				to := NewCoord(from.File()+dir.f*off, from.Rank()+dir.r*off)
+				if to == NoCoord || board.At(to).Color() == piece.Color() {
 					break
 				}
 
-				moveSet = append(moveSet, NewMove(start, end))
-				if *board.At(end) != NoPiece {
+				moveSet = append(moveSet, NewMove(from, to, MoveFlags{Moves: piece.Type(), Captures: board.At(to).Type()}))
+				if *board.At(to) != NoPiece {
 					break
 				}
 			}
@@ -107,20 +134,20 @@ func (board *Board) genKingMoves(pieces []int) []Move {
 			continue
 		}
 
-		start := coordFromIndex(i)
+		from := coordFromIndex(i)
 		for x := -1; x < 2; x++ {
 			for y := -1; y < 2; y++ {
-				end := NewCoord(start.File()+x, start.Rank()+y)
-				if end != NoCoord && board.At(end).Color() != piece.Color() {
-					moveSet = append(moveSet, NewMove(start, end))
+				to := NewCoord(from.File()+x, from.Rank()+y)
+				if to != NoCoord && board.At(to).Color() != piece.Color() {
+					moveSet = append(moveSet, NewMove(from, to, MoveFlags{Moves: King, Captures: board.At(to).Type()}))
 				}
 			}
 		}
 
 		checkCastle := func(side CastleSide, dir int) {
-			between, end := NewCoord(start.File()+1*dir, start.Rank()), NewCoord(start.File()+2*dir, start.Rank())
-			if board.CastleRights.Can(piece.Color(), side) && *board.At(between) == NoPiece && *board.At(end) == NoPiece {
-				moveSet = append(moveSet, NewMove(start, end))
+			between, to := NewCoord(from.File()+1*dir, from.Rank()), NewCoord(from.File()+2*dir, from.Rank())
+			if board.CastleRights.Can(piece.Color(), side) && *board.At(between) == NoPiece && *board.At(to) == NoPiece {
+				moveSet = append(moveSet, NewMove(from, to, MoveFlags{Moves: King, Castle: side}))
 			}
 		}
 		checkCastle(Kingside, 1)
@@ -131,27 +158,58 @@ func (board *Board) genKingMoves(pieces []int) []Move {
 
 	return moveSet
 }
-func (board *Board) genPseudoMoves() []Move {
+func (board *Board) genPseudoMoves(types ...PieceType) []Move {
 	moveSet := make([]Move, 0, 128)
 
-	pieces := make([]int, 0, 16)
-	for i := 0; i < len(board.squares); i++ {
-		if board.squares[i].Color() == board.SideToMove {
-			pieces = append(pieces, i)
-		}
-	}
+	pieces := board.getPieceIndices(types...)
 
 	moveSet = append(moveSet, board.genPawnMoves(pieces)...)
 	moveSet = append(moveSet, board.genKnightMoves(pieces)...)
 	moveSet = append(moveSet, board.genSlidingMoves(pieces)...)
 	moveSet = append(moveSet, board.genKingMoves(pieces)...)
+
 	return moveSet
 }
-func (board *Board) kingIsCapturable() bool {
-	moves := board.genPseudoMoves()
+func (board *Board) kingIsCapturable(side SideColor) bool {
+	var from Coord
+	for i := 0; i < len(board.squares); i++ {
+		if board.squares[i].Color() == side && board.squares[i].Type() == King {
+			from = coordFromIndex(i)
+			break
+		}
+	}
 
-	for _, move := range moves {
-		if board.At(move.End).Type() == King {
+	for i, dir := range slideDirections {
+		for off := 1; ; off++ {
+			to := NewCoord(from.File()+dir.f*off, from.Rank()+dir.r*off)
+			if to == NoCoord || board.At(to).Color() == side {
+				break
+			}
+
+			target := board.At(to).Type()
+			if target == Queen || (i < 4 && target == Bishop) || (i >= 4 && target == Rook) {
+				return true
+			} else if target != NoType {
+				break
+			}
+		}
+	}
+
+	for _, off := range knightOffsets {
+		to := NewCoord(from.File()+off.f, from.Rank()+off.r)
+		if to != NoCoord && board.At(to).Color() != side && board.At(to).Type() == Knight {
+			return true
+		}
+	}
+
+	dir := 1
+	if side == Black {
+		dir = -1
+	}
+	pawnSquares := [...]Coord{NewCoord(from.File()-1, from.Rank()+dir), NewCoord(from.File()+1, from.Rank()+dir)}
+	for _, square := range pawnSquares {
+		piece := board.At(square)
+		if piece != nil && piece.Type() == Pawn && piece.Color() != side {
 			return true
 		}
 	}
@@ -165,28 +223,33 @@ func (board *Board) GenMoves() []Move {
 	for _, move := range pseudoMoves {
 		isLegal := true
 
-		if diff := move.Start.File() - move.End.File(); board.At(move.Start).Type() == King && diff/2 != 0 {
-			tempBoard := *board
-			tempBoard.SideToMove ^= 0b11
-			if !tempBoard.kingIsCapturable() {
-				tempBoard.SideToMove = board.SideToMove
-				tempBoard.MakeMove(NewMove(move.Start, NewCoord(move.End.File()+diff/2, move.End.Rank())))
+		if move.CastlesTo() != NoCastle {
+			off := 1
+			if move.CastlesTo() == Queenside {
+				off = -1
+			}
 
-				if tempBoard.kingIsCapturable() {
+			tempBoard := *board
+			if tempBoard.kingIsCapturable(board.SideToMove) {
+				isLegal = false
+			} else {
+				if err := tempBoard.MakeMove(NewMove(move.From, NewCoord(move.To.File()+off, move.To.Rank()), MoveFlags{Moves: King})); err != nil {
 					isLegal = false
 				}
-			} else {
-				isLegal = false
+
+				if tempBoard.kingIsCapturable(board.SideToMove) {
+					isLegal = false
+				}
 			}
 		}
 
 		if isLegal {
 			tempBoard := *board
-			if !tempBoard.MakeMove(move) {
-				panic(fmt.Sprintf("invalid move generated: %v", move))
+			if err := tempBoard.MakeMove(move); err != nil {
+				panic(fmt.Sprintf("invalid move generated: %v", err))
 			}
 
-			if tempBoard.kingIsCapturable() {
+			if tempBoard.kingIsCapturable(board.SideToMove) {
 				isLegal = false
 			}
 		}
@@ -199,59 +262,127 @@ func (board *Board) GenMoves() []Move {
 	return moveSet
 }
 
-func (board *Board) IsLegal(move Move) bool {
-	legalMoves := board.GenMoves()
-
-	for _, legal := range legalMoves {
-		if move == legal {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (board *Board) MakeMove(move Move) bool {
-	if move.Start == NoCoord || move.End == NoCoord {
-		return false
-	}
-
-	piece := *board.At(move.Start)
-	resetHClock := *board.At(move.End) != NoPiece || piece.Type() == Pawn
-
-	*board.At(move.End) = piece
-	*board.At(move.Start) = NoPiece
-	if diff := move.Start.File() - move.End.File(); piece.Type() == King && diff/2 != 0 {
-		var corner Coord
-		if diff < 0 { // kingside castle
-			corner = NewCoord(7, move.End.Rank())
-		} else { // queenside castle
-			corner = NewCoord(0, move.End.Rank())
+func (board *Board) MakeMove(move Move) (err error) {
+	if move.CastlesTo() != NoCastle && move.From == NoCoord && move.To == NoCoord {
+		rank := 0
+		if board.SideToMove == Black {
+			rank = 7
 		}
 
-		*board.At(NewCoord(move.End.File()+diff/2, move.End.Rank())) = *board.At(corner)
-		*board.At(corner) = NoPiece
-	} else if piece.Type() == Pawn && move.End == board.EnPassantTarget {
-		*board.At(NewCoord(move.End.File(), move.Start.Rank())) = NoPiece
+		move.From = NewCoord(4, rank)
+		if move.CastlesTo() == Kingside {
+			move.To = NewCoord(6, rank)
+		} else {
+			move.To = NewCoord(2, rank)
+		}
+	}
+	if move.From == NoCoord || move.To == NoCoord {
+		return fmt.Errorf("invalid move coordinates")
+	}
+
+	movePiece := *board.At(move.From)
+	if move.Moves() != movePiece.Type() {
+		return fmt.Errorf("piece types don't match")
+	}
+
+	if diff := move.From.File() - move.To.File(); move.CastlesTo() != NoCastle {
+		if !board.CastleRights.Can(board.SideToMove, move.CastlesTo()) {
+			return fmt.Errorf("castling on that side is not allowed")
+		} else if move.Captures() != NoType {
+			return fmt.Errorf("cannot castle and capture")
+		} else if move.PromotesTo() != NoType {
+			return fmt.Errorf("cannot castle and promote")
+		} else if move.IsEnPassant() {
+			return fmt.Errorf("cannot castle and en passant")
+		} else if movePiece.Type() != King || diff/2 == 0 {
+			return fmt.Errorf("invalid castle conditions")
+		}
+	} else if movePiece.Type() == King && diff/2 != 0 {
+		return fmt.Errorf("cannot castle implicitly")
+	}
+
+	capturePiece := *board.At(move.To)
+	if move.Captures() != capturePiece.Type() {
+		return fmt.Errorf("capture types don't match")
+	}
+
+	if promoteType := move.PromotesTo(); promoteType != NoType {
+		if movePiece.Type() != Pawn || move.To.Rank() != 7 || move.To.Rank() != 0 || promoteType == King || promoteType == Pawn {
+			return fmt.Errorf("invalid promotion")
+		}
+
+		movePiece = NewPiece(movePiece.Color(), promoteType)
+	} else if movePiece.Type() == Pawn && (move.To.Rank() == 7 || move.To.Rank() == 0) {
+		return fmt.Errorf("pawns on the last rank must promote")
+	}
+
+	if move.IsEnPassant() && move.To != board.EnPassantTarget {
+		return fmt.Errorf("cannot en passant in this position")
+	} else if move.IsEnPassant() && movePiece.Type() != Pawn {
+		return fmt.Errorf("cannot en passant non-pawn piece")
+	}
+
+	*board.At(move.To) = movePiece
+	*board.At(move.From) = NoPiece
+
+	if move.CastlesTo() == Kingside {
+		rook := board.At(NewCoord(7, move.To.Rank()))
+		home := board.At(NewCoord(5, move.To.Rank()))
+		*home = *rook
+		*rook = NoPiece
+	} else if move.CastlesTo() == Queenside {
+		rook := board.At(NewCoord(1, move.To.Rank()))
+		home := board.At(NewCoord(3, move.To.Rank()))
+		*home = *rook
+		*rook = NoPiece
+	} else if movePiece.Type() == Pawn && move.To == board.EnPassantTarget {
+		*board.At(NewCoord(move.To.File(), move.From.Rank())) = NoPiece
 	}
 
 	board.EnPassantTarget = NoCoord
-	if diff := move.Start.Rank() - move.End.Rank(); piece.Type() == Pawn && diff/2 != 0 {
-		left, right := board.At(NewCoord(move.End.File()+1, move.End.Rank())), board.At(NewCoord(move.End.File()-1, move.End.Rank()))
-		if (left != nil && left.Type() == Pawn && left.Color() != piece.Color()) || (right != nil && right.Type() == Pawn && right.Color() != piece.Color()) {
-			board.EnPassantTarget = NewCoord(move.End.File(), move.End.Rank()+diff/2)
+	if diff := move.From.Rank() - move.To.Rank(); movePiece.Type() == Pawn && diff/2 != 0 {
+		left, right := board.At(NewCoord(move.To.File()+1, move.To.Rank())), board.At(NewCoord(move.To.File()-1, move.To.Rank()))
+		if (left != nil && left.Type() == Pawn && left.Color() != movePiece.Color()) || (right != nil && right.Type() == Pawn && right.Color() != movePiece.Color()) {
+			board.EnPassantTarget = NewCoord(move.To.File(), move.To.Rank()+diff/2)
+		}
+	}
+
+	if movePiece.Type() == King {
+		board.CastleRights.Disallow(board.SideToMove, Kingside)
+		board.CastleRights.Disallow(board.SideToMove, Queenside)
+	} else if movePiece.Type() == Rook {
+		switch move.From {
+		case NewCoord(0, 0):
+			board.CastleRights.Disallow(White, Queenside)
+		case NewCoord(7, 0):
+			board.CastleRights.Disallow(White, Kingside)
+		case NewCoord(0, 7):
+			board.CastleRights.Disallow(Black, Queenside)
+		case NewCoord(7, 7):
+			board.CastleRights.Disallow(Black, Kingside)
+		}
+	} else if move.Captures() == Rook {
+		switch move.To {
+		case NewCoord(0, 0):
+			board.CastleRights.Disallow(White, Queenside)
+		case NewCoord(7, 0):
+			board.CastleRights.Disallow(White, Kingside)
+		case NewCoord(0, 7):
+			board.CastleRights.Disallow(Black, Queenside)
+		case NewCoord(7, 7):
+			board.CastleRights.Disallow(Black, Kingside)
 		}
 	}
 
 	board.SideToMove ^= 0b11
-	if piece.Color() == Black {
+	if movePiece.Color() == Black {
 		board.FullmoveCounter++
 	}
-	if resetHClock {
+	if movePiece.Type() == Pawn || *board.At(move.To) != NoPiece {
 		board.HalfmoveClock = 0
 	} else {
 		board.HalfmoveClock++
 	}
 
-	return true
+	return
 }

@@ -3,6 +3,7 @@ package chess
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -22,6 +23,16 @@ const ( // piece types
 	typeMask  uint8 = 0b111
 	typeShift uint8 = 2
 )
+
+func TypeFromRune(r rune) PieceType {
+	return map[rune]PieceType{
+		'N': Knight,
+		'B': Bishop,
+		'R': Rook,
+		'Q': Queen,
+		'K': King,
+	}[r]
+}
 
 func (pt PieceType) String() string {
 	switch pt {
@@ -129,6 +140,22 @@ func (piece Piece) String() string {
 		return ""
 	}
 
+	// return map[Piece]string{
+	// 	NewPiece(White, Pawn):   "♙",
+	// 	NewPiece(White, Knight): "♘",
+	// 	NewPiece(White, Bishop): "♗",
+	// 	NewPiece(White, Rook):   "♖",
+	// 	NewPiece(White, Queen):  "♕",
+	// 	NewPiece(White, King):   "♔",
+
+	// 	NewPiece(Black, Pawn):   "♟︎",
+	// 	NewPiece(Black, Knight): "♞",
+	// 	NewPiece(Black, Bishop): "♝",
+	// 	NewPiece(Black, Rook):   "♜",
+	// 	NewPiece(Black, Queen):  "♛",
+	// 	NewPiece(Black, King):   "♚",
+	// }[piece]
+
 	name := [...]rune{'p', 'n', 'b', 'r', 'q', 'k'}[int(piece.Type())-1]
 	if piece.Color() == White {
 		name += 'A' - 'a' // capitalize name
@@ -204,21 +231,231 @@ func (c Coord) String() string {
 //
 //
 //
+// MOVE FLAGS
+// --------------------------------------------------------
+//
+
+type CheckType uint8
+
+const (
+	NoCheck CheckType = iota
+	Check
+	Checkmate
+)
+
+type MoveFlags struct {
+	Moves     PieceType
+	Captures  PieceType
+	Promotes  PieceType
+	Castle    CastleSide
+	Check     CheckType
+	EnPassant bool
+	DrawOffer bool
+}
+
+const (
+	moveMask       uint16 = 0b111
+	moveShift      uint16 = 0
+	captureMask    uint16 = 0b111
+	captureShift   uint16 = 3
+	promoteMask    uint16 = 0b111
+	promoteShift   uint16 = 6
+	castleMask     uint16 = 0b11
+	castleShift    uint16 = 9
+	checkMask      uint16 = 0b11
+	checkShift     uint16 = 11
+	enPassantMask  uint16 = 0b1
+	enPassantShift uint16 = 13
+	drawMask       uint16 = 0b1
+	drawShift      uint16 = 14
+)
+
+func (f MoveFlags) Compress() uint16 {
+	var epFlag, drawFlag uint16 = 0, 0
+	if f.EnPassant {
+		epFlag = 1
+	}
+	if f.DrawOffer {
+		drawFlag = 1
+	}
+
+	return uint16(f.Moves)&moveMask<<moveShift |
+		uint16(f.Captures)&captureMask<<captureShift |
+		uint16(f.Promotes)&promoteMask<<promoteShift |
+		uint16(f.Castle)&castleMask<<castleShift |
+		uint16(f.Check)&checkMask<<checkShift |
+		epFlag&enPassantMask<<enPassantShift |
+		drawFlag&drawMask<<drawShift
+}
+
+//
+// --------------------------------------------------------
+// MOVE FLAGS
+//
+//
+//
 // MOVE
 // --------------------------------------------------------
 //
 
 // Move structure
 type Move struct {
-	Start, End Coord
+	From, To Coord
+	flags    uint16
 }
 
-func NewMove(start, end Coord) Move {
-	return Move{start, end}
+var moveRegex = regexp.MustCompile(`^(?P<Move>(?P<Piece>[NBRQK]?)(?:(?P<FileSpecifier>[a-h])?(?P<RankSpecifier>[1-8])?)(?P<Takes>x?)(?P<Destination>[a-h][1-8])(?:=?(?P<Promotion>[NBRQ]))?|(?P<Castle>[0O](?:-[0O]){1,2}))(?P<Check>\+{0,2}|#)(?P<EnPassant> e\.p\.)?(?P<DrawOffer> \(=\))?$`)
+
+func NewMove(start, end Coord, flags MoveFlags) Move {
+	return Move{start, end, flags.Compress()}
+}
+func MoveFromString(s string, board *Board) (move Move, err error) {
+	matches := moveRegex.FindStringSubmatch(s)
+	if matches == nil {
+		return move, fmt.Errorf("move doesn't match regex")
+	}
+	moveFlags := MoveFlags{}
+	defer func() { move.flags = moveFlags.Compress() }()
+
+	// Draw offer
+	if i := moveRegex.SubexpIndex("DrawOffer"); i != -1 && matches[i] != "" {
+		moveFlags.DrawOffer = true
+	}
+
+	// En passant
+	if i := moveRegex.SubexpIndex("EnPassant"); i != -1 && matches[i] != "" {
+		moveFlags.EnPassant = true
+	}
+
+	// Check
+	if i := moveRegex.SubexpIndex("Check"); i != -1 && matches[i] != "" {
+		if matches[i] == "+" || matches[i] == "++" {
+			moveFlags.Check = Check
+		} else if matches[i] == "#" {
+			moveFlags.Check = Checkmate
+		} else {
+			panic(fmt.Sprintf("invalid check notation %q, want +|++|#", matches[i]))
+		}
+	}
+
+	// Castling
+	if i := moveRegex.SubexpIndex("Castle"); i != -1 && matches[i] != "" {
+		if matches[i] == "O-O" || matches[i] == "0-0" {
+			moveFlags.Castle = Kingside
+		} else if matches[i] == "O-O-O" || matches[i] == "0-0-0" {
+			moveFlags.Castle = Queenside
+		} else {
+			panic(fmt.Sprintf("invalid castle notation %q, want 0-0|O-O|0-0-0|O-O-O", matches[i]))
+		}
+
+		moveFlags.Moves = King
+		return // no need to continue parsing
+	}
+
+	// Pawn promotion
+	if i := moveRegex.SubexpIndex("Promotion"); i != -1 && matches[i] != "" {
+		pieceType := TypeFromRune(rune(matches[i][0]))
+		if pieceType == NoType || pieceType == King {
+			panic(fmt.Sprintf("invalid promotion notation %q, want [NBRQ]", matches[i]))
+		}
+
+		moveFlags.Promotes = pieceType
+	}
+
+	// Destination
+	if i := moveRegex.SubexpIndex("Destination"); i != -1 && matches[i] != "" {
+		if dest, ok := CoordFromString(matches[i]); !ok {
+			panic(fmt.Sprintf("invalid destination notation %q, want [a-h][1-8]", matches[i]))
+		} else {
+			move.To = dest
+		}
+	} else {
+		return move, fmt.Errorf("move must include destination square")
+	}
+
+	// Takes
+	if i := moveRegex.SubexpIndex("Takes"); i != -1 && matches[i] != "" {
+		pieceType := board.At(move.To).Type()
+		if pieceType == NoType {
+			return move, fmt.Errorf("cannot take on empty square")
+		}
+
+		moveFlags.Captures = pieceType
+	}
+
+	// Move piece
+	if i := moveRegex.SubexpIndex("Piece"); i != -1 && matches[i] != "" {
+		moveFlags.Moves = TypeFromRune(rune(matches[i][0]))
+		if moveFlags.Moves == NoType {
+			panic(fmt.Sprintf("invalid move piece notation %q, want [NBRQK]?", matches[i]))
+		}
+	} else {
+		moveFlags.Moves = Pawn
+	}
+
+	// Piece disambiguation
+	file, rank := -1, -1
+	if i := moveRegex.SubexpIndex("FileSpecifier"); i != -1 && matches[i] != "" {
+		file = int(matches[i][0] - 'a')
+	}
+	if i := moveRegex.SubexpIndex("RankSpecifier"); i != -1 && matches[i] != "" {
+		rank = int(matches[i][0] - '1')
+	}
+	move.From = NewCoord(file, rank)
+
+	if file == -1 || rank == -1 {
+		candidates := board.genPseudoMoves(moveFlags.Moves)
+
+		for _, c := range candidates {
+			if c.To == move.To && (file == -1 || c.From.File() == file) && (rank == -1 || c.From.Rank() == rank) {
+				if move.From != NoCoord {
+					return move, fmt.Errorf("move is ambiguous")
+				}
+				move.From = c.From
+			}
+		}
+	}
+
+	if move.From == NoCoord {
+		return move, fmt.Errorf("move is impossible")
+	} else if board.At(move.From).Type() != moveFlags.Moves {
+		return move, fmt.Errorf("wrong piece type provided %v", moveFlags.Moves.String())
+	}
+
+	return
+}
+
+func (m Move) Matches(move Move) bool {
+	return m.To == move.To && m.From == move.From
+}
+
+func (m Move) Moves() PieceType {
+	return PieceType(m.flags >> moveShift & moveMask)
+}
+func (m Move) Captures() PieceType {
+	return PieceType(m.flags >> captureShift & captureMask)
+}
+func (m Move) PromotesTo() PieceType {
+	return PieceType(m.flags >> promoteShift & promoteMask)
+}
+func (m Move) CastlesTo() CastleSide {
+	return CastleSide(m.flags >> castleShift & castleMask)
+}
+func (m Move) Check() CheckType {
+	return CheckType(m.flags >> checkShift & checkMask)
+}
+func (m Move) IsEnPassant() bool {
+	return m.flags>>enPassantShift&enPassantMask == 1
+}
+func (m Move) OffersDraw() bool {
+	return m.flags>>drawShift&drawMask == 1
+}
+func (m Move) SAN(board *Board) string {
+	return ""
 }
 
 func (m Move) String() string {
-	return fmt.Sprintf("%v->%v", m.Start, m.End)
+	return fmt.Sprintf("%v->%v", m.From, m.To)
 }
 
 //
@@ -234,7 +471,8 @@ func (m Move) String() string {
 type CastleSide uint8
 
 const (
-	Kingside CastleSide = iota
+	NoCastle CastleSide = iota
+	Kingside
 	Queenside
 )
 
@@ -268,14 +506,21 @@ func (c *Castles) Allow(sc SideColor, side CastleSide) {
 		return
 	}
 
-	c[uint(sc&0b10)|uint(side)] = true
+	c[uint(sc&0b10)|uint(side-1)] = true
+}
+func (c *Castles) Disallow(sc SideColor, side CastleSide) {
+	if (sc != White && sc != Black) || (side != Kingside && side != Queenside) {
+		return
+	}
+
+	c[uint(sc&0b10)|uint(side-1)] = false
 }
 func (c *Castles) Can(sc SideColor, side CastleSide) bool {
 	if (sc != White && sc != Black) || (side != Kingside && side != Queenside) {
 		return false
 	}
 
-	return c[uint(sc&0b10)|uint(side)]
+	return c[uint(sc&0b10)|uint(side-1)]
 }
 
 func (c *Castles) String() string {

@@ -422,5 +422,6 @@ func TestCoord(t *testing.T) {
 func TestMoveGen(t *testing.T) {
 	board, _ := BoardFromString("8/8/8/8/8/3b4/8/4K2R w - - 0 1")
 	moves := board.GenMoves()
+	t.Logf("\n%v", board)
 	t.Errorf("\n%v", moves)
 }
