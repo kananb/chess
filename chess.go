@@ -233,7 +233,7 @@ func (board *Board) GenMoves() []Move {
 			if tempBoard.kingIsCapturable(board.SideToMove) {
 				isLegal = false
 			} else {
-				if err := tempBoard.MakeMove(NewMove(move.From, NewCoord(move.To.File()+off, move.To.Rank()), MoveFlags{Moves: King})); err != nil {
+				if err := tempBoard.MakeMove(NewMove(move.From, NewCoord(move.From.File()+off, move.From.Rank()), MoveFlags{Moves: King})); err != nil {
 					isLegal = false
 				}
 
@@ -263,19 +263,6 @@ func (board *Board) GenMoves() []Move {
 }
 
 func (board *Board) MakeMove(move Move) (err error) {
-	if move.CastlesTo() != NoCastle && move.From == NoCoord && move.To == NoCoord {
-		rank := 0
-		if board.SideToMove == Black {
-			rank = 7
-		}
-
-		move.From = NewCoord(4, rank)
-		if move.CastlesTo() == Kingside {
-			move.To = NewCoord(6, rank)
-		} else {
-			move.To = NewCoord(2, rank)
-		}
-	}
 	if move.From == NoCoord || move.To == NoCoord {
 		return fmt.Errorf("invalid move coordinates")
 	}
@@ -331,7 +318,7 @@ func (board *Board) MakeMove(move Move) (err error) {
 		*home = *rook
 		*rook = NoPiece
 	} else if move.CastlesTo() == Queenside {
-		rook := board.At(NewCoord(1, move.To.Rank()))
+		rook := board.At(NewCoord(0, move.To.Rank()))
 		home := board.At(NewCoord(3, move.To.Rank()))
 		*home = *rook
 		*rook = NoPiece

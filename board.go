@@ -340,10 +340,18 @@ func MoveFromString(s string, board *Board) (move Move, err error) {
 
 	// Castling
 	if i := moveRegex.SubexpIndex("Castle"); i != -1 && matches[i] != "" {
+		rank := 0
+		if board.SideToMove == Black {
+			rank = 7
+		}
+		move.From = NewCoord(4, rank)
+
 		if matches[i] == "O-O" || matches[i] == "0-0" {
 			moveFlags.Castle = Kingside
+			move.To = NewCoord(6, rank)
 		} else if matches[i] == "O-O-O" || matches[i] == "0-0-0" {
 			moveFlags.Castle = Queenside
+			move.To = NewCoord(2, rank)
 		} else {
 			panic(fmt.Sprintf("invalid castle notation %q, want 0-0|O-O|0-0-0|O-O-O", matches[i]))
 		}
