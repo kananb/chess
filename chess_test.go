@@ -419,9 +419,9 @@ func TestCoord(t *testing.T) {
 	}
 }
 
-func TestMoveGen(t *testing.T) {
-	board, _ := BoardFromString("8/8/8/8/8/3b4/8/4K2R w - - 0 1")
-	moves := board.GenMoves()
-	t.Logf("\n%v", board)
-	t.Errorf("\n%v", moves)
+func BenchmarkMoveGen(b *testing.B) {
+	board, _ := BoardFromString("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
+	for i := 0; i < b.N; i++ {
+		board.GenMoves()
+	}
 }
