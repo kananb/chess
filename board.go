@@ -254,24 +254,30 @@ type MoveFlags struct {
 }
 
 const (
-	moveMask       uint16 = 0b111
-	moveShift      uint16 = 0
-	captureMask    uint16 = 0b111
-	captureShift   uint16 = 3
-	promoteMask    uint16 = 0b111
-	promoteShift   uint16 = 6
-	castleMask     uint16 = 0b11
-	castleShift    uint16 = 9
-	checkMask      uint16 = 0b11
-	checkShift     uint16 = 11
-	enPassantMask  uint16 = 0b1
-	enPassantShift uint16 = 13
-	drawMask       uint16 = 0b1
-	drawShift      uint16 = 14
+	moveMask        uint32 = 0b111
+	moveShift       uint32 = 0
+	captureMask     uint32 = 0b111
+	captureShift    uint32 = 3
+	promoteMask     uint32 = 0b111
+	promoteShift    uint32 = 6
+	castleMask      uint32 = 0b11
+	castleShift     uint32 = 9
+	checkMask       uint32 = 0b11
+	checkShift      uint32 = 11
+	enPassantMask   uint32 = 0b1
+	enPassantShift  uint32 = 13
+	drawMask        uint32 = 0b1
+	drawShift       uint32 = 14
+	prevRightsMask  uint32 = 0b1111
+	prevRightsShift uint32 = 15
+	plyMask         uint32 = 0b111111
+	plyShift        uint32 = 19
+	epTargetMask    uint32 = 0b11111111
+	epTargetShift   uint32 = 25
 )
 
-func (f MoveFlags) Compress() uint16 {
-	var epFlag, drawFlag uint16 = 0, 0
+func (f MoveFlags) Compress() uint32 {
+	var epFlag, drawFlag uint32 = 0, 0
 	if f.EnPassant {
 		epFlag = 1
 	}
@@ -279,11 +285,11 @@ func (f MoveFlags) Compress() uint16 {
 		drawFlag = 1
 	}
 
-	return uint16(f.Moves)&moveMask<<moveShift |
-		uint16(f.Captures)&captureMask<<captureShift |
-		uint16(f.Promotes)&promoteMask<<promoteShift |
-		uint16(f.Castle)&castleMask<<castleShift |
-		uint16(f.Check)&checkMask<<checkShift |
+	return uint32(f.Moves)&moveMask<<moveShift |
+		uint32(f.Captures)&captureMask<<captureShift |
+		uint32(f.Promotes)&promoteMask<<promoteShift |
+		uint32(f.Castle)&castleMask<<castleShift |
+		uint32(f.Check)&checkMask<<checkShift |
 		epFlag&enPassantMask<<enPassantShift |
 		drawFlag&drawMask<<drawShift
 }
@@ -301,7 +307,7 @@ func (f MoveFlags) Compress() uint16 {
 // Move structure
 type Move struct {
 	From, To Coord
-	flags    uint16
+	flags    uint32
 }
 
 var moveRegex = regexp.MustCompile(`^(?P<Move>(?P<Piece>[NBRQK]?)(?:(?P<FileSpecifier>[a-h])?(?P<RankSpecifier>[1-8])?)(?P<Takes>x?)(?P<Destination>[a-h][1-8])(?:=?(?P<Promotion>[NBRQ]))?|(?P<Castle>[0O](?:-[0O]){1,2}))(?P<Check>\+{0,2}|#)(?P<EnPassant> e\.p\.)?(?P<DrawOffer> \(=\))?$`)
@@ -487,26 +493,33 @@ const (
 // Castle Structure
 type Castles [4]bool
 
-func NewCastles() (castles Castles) {
+func NewCastles() (c Castles) {
 	return
 }
-func CastlesFromString(s string) (castles Castles, ok bool) {
+func CastlesFromString(s string) (c Castles, ok bool) {
 	for _, symbol := range s {
 		switch {
-		case symbol == 'K' && !castles.Can(White, Kingside):
-			castles.Allow(White, Kingside)
-		case symbol == 'Q' && !castles.Can(White, Queenside):
-			castles.Allow(White, Queenside)
-		case symbol == 'k' && !castles.Can(Black, Kingside):
-			castles.Allow(Black, Kingside)
-		case symbol == 'q' && !castles.Can(Black, Queenside):
-			castles.Allow(Black, Queenside)
+		case symbol == 'K' && !c.Can(White, Kingside):
+			c.Allow(White, Kingside)
+		case symbol == 'Q' && !c.Can(White, Queenside):
+			c.Allow(White, Queenside)
+		case symbol == 'k' && !c.Can(Black, Kingside):
+			c.Allow(Black, Kingside)
+		case symbol == 'q' && !c.Can(Black, Queenside):
+			c.Allow(Black, Queenside)
 		default:
-			return castles, false
+			return c, false
 		}
 	}
 
-	return castles, true
+	return c, true
+}
+func CastlesFromWord(word uint8) (c Castles) {
+	for i := 0; i < len(c); i++ {
+		c[i] = word&(1<<i) != 0
+	}
+
+	return
 }
 
 func (c *Castles) Allow(sc SideColor, side CastleSide) {
@@ -529,6 +542,15 @@ func (c *Castles) Can(sc SideColor, side CastleSide) bool {
 	}
 
 	return c[uint(sc&0b10)|uint(side-1)]
+}
+func (c *Castles) ToWord() (word uint8) {
+	for i := 0; i < len(c); i++ {
+		if c[i] {
+			word |= 1 << i
+		}
+	}
+
+	return
 }
 
 func (c *Castles) String() string {
@@ -576,6 +598,8 @@ type Board struct {
 	EnPassantTarget Coord
 	HalfmoveClock   int
 	FullmoveCounter int
+
+	history []Move
 }
 
 func NewBoard() *Board {
@@ -583,6 +607,7 @@ func NewBoard() *Board {
 	board.Orientation = White
 	board.SideToMove = White
 	board.FullmoveCounter = 1
+	board.history = make([]Move, 0, 128)
 
 	return board
 }

@@ -419,9 +419,174 @@ func TestCoord(t *testing.T) {
 	}
 }
 
+func TestUnmakeMove(t *testing.T) {
+	tests := []struct {
+		position string
+		move     Move
+	}{
+		{
+			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+			NewMove(NewCoord(4, 0), NewCoord(6, 0), MoveFlags{Moves: King, Castle: Kingside}),
+		},
+	}
+
+	for _, test := range tests {
+		board, _ := BoardFromString(test.position)
+		apply := *board
+
+		if err := apply.MakeMove(test.move); err != nil {
+			t.Errorf("Make move failed: %v", err)
+		}
+		apply.UnmakeMove()
+
+		if board.squares != apply.squares {
+			t.Errorf("board squares don't match: %q != %q", board.FEN(), apply.FEN())
+		}
+		if board.SideToMove != apply.SideToMove {
+			t.Errorf("moves sides don't match: %v != %v", board.SideToMove, apply.SideToMove)
+		}
+		if board.CastleRights != apply.CastleRights {
+			t.Errorf("castle rights don't match: %v != %v", board.CastleRights, apply.CastleRights)
+		}
+		if board.EnPassantTarget != apply.EnPassantTarget {
+			t.Errorf("en passant targets don't match: %v != %v", board.EnPassantTarget, apply.EnPassantTarget)
+		}
+		if board.HalfmoveClock != apply.HalfmoveClock {
+			t.Errorf("halfmove clocks don't match: %v != %v", board.HalfmoveClock, apply.HalfmoveClock)
+		}
+		if board.FullmoveCounter != apply.FullmoveCounter {
+			t.Errorf("move counters don't match: %v != %v", board.FullmoveCounter, apply.FullmoveCounter)
+		}
+	}
+}
+
+func TestCountMoves(t *testing.T) {
+	tests := []struct {
+		position string
+		depth    int
+		want     int
+	}{
+		{
+			"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			1,
+			20,
+		},
+		{
+			"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			2,
+			400,
+		},
+		{
+			"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			3,
+			8902,
+		},
+		{
+			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+			1,
+			48,
+		},
+		{
+			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+			2,
+			2039,
+		},
+		{
+			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+			3,
+			97862,
+		},
+		// {
+		// 	"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		// 	4,
+		// 	4085603,
+		// },
+		{
+			"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+			1,
+			14,
+		},
+		{
+			"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+			2,
+			191,
+		},
+		{
+			"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+			3,
+			2812,
+		},
+		// {
+		// 	"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+		// 	5,
+		// 	674624,
+		// },
+		{
+			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+			1,
+			44,
+		},
+		{
+			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+			2,
+			1486,
+		},
+		{
+			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+			3,
+			62379,
+		},
+		// {
+		// 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+		// 	4,
+		// 	2103487,
+		// },
+		// {
+		// 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+		// 	5,
+		// 	89941194,
+		// },
+	}
+
+	for _, test := range tests {
+		board, _ := BoardFromString(test.position)
+		if got, breakdown := board.CountMoves(0, test.depth); got != test.want {
+			t.Errorf("CountMoves() on [d=%d] %q = %d, want %d\n\t%v", test.depth, test.position, got, test.want, breakdown)
+		}
+	}
+}
+
 func BenchmarkMoveGen(b *testing.B) {
 	board, _ := BoardFromString("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
 	for i := 0; i < b.N; i++ {
 		board.GenMoves()
+	}
+}
+
+func BenchmarkMakeUnmake(b *testing.B) {
+	board, _ := BoardFromString("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
+	move := NewMove(NewCoord(4, 0), NewCoord(4, 8), MoveFlags{Moves: Rook, Captures: Rook})
+
+	for i := 0; i < b.N; i++ {
+		board.MakeMove(move)
+		board.UnmakeMove()
+	}
+}
+
+func BenchmarkCopyUndo(b *testing.B) {
+	board, _ := BoardFromString("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
+	move := NewMove(NewCoord(4, 0), NewCoord(4, 8), MoveFlags{Moves: Rook, Captures: Rook})
+
+	for i := 0; i < b.N; i++ {
+		temp := *board
+		temp.MakeMove(move)
+	}
+}
+
+func BenchmarkCountMoves(b *testing.B) {
+	board := StartingPosition()
+
+	for i := 0; i < b.N; i++ {
+		board.CountMoves(0, 1)
 	}
 }
