@@ -254,30 +254,24 @@ type MoveFlags struct {
 }
 
 const (
-	moveMask        uint32 = 0b111
-	moveShift       uint32 = 0
-	captureMask     uint32 = 0b111
-	captureShift    uint32 = 3
-	promoteMask     uint32 = 0b111
-	promoteShift    uint32 = 6
-	castleMask      uint32 = 0b11
-	castleShift     uint32 = 9
-	checkMask       uint32 = 0b11
-	checkShift      uint32 = 11
-	enPassantMask   uint32 = 0b1
-	enPassantShift  uint32 = 13
-	drawMask        uint32 = 0b1
-	drawShift       uint32 = 14
-	prevRightsMask  uint32 = 0b1111
-	prevRightsShift uint32 = 15
-	plyMask         uint32 = 0b111111
-	plyShift        uint32 = 19
-	epTargetMask    uint32 = 0b11111111
-	epTargetShift   uint32 = 25
+	moveMask       uint16 = 0b111
+	moveShift      uint16 = 0
+	captureMask    uint16 = 0b111
+	captureShift   uint16 = 3
+	promoteMask    uint16 = 0b111
+	promoteShift   uint16 = 6
+	castleMask     uint16 = 0b11
+	castleShift    uint16 = 9
+	checkMask      uint16 = 0b11
+	checkShift     uint16 = 11
+	enPassantMask  uint16 = 0b1
+	enPassantShift uint16 = 13
+	drawMask       uint16 = 0b1
+	drawShift      uint16 = 14
 )
 
-func (f MoveFlags) Compress() uint32 {
-	var epFlag, drawFlag uint32 = 0, 0
+func (f MoveFlags) Compress() uint16 {
+	var epFlag, drawFlag uint16 = 0, 0
 	if f.EnPassant {
 		epFlag = 1
 	}
@@ -285,11 +279,11 @@ func (f MoveFlags) Compress() uint32 {
 		drawFlag = 1
 	}
 
-	return uint32(f.Moves)&moveMask<<moveShift |
-		uint32(f.Captures)&captureMask<<captureShift |
-		uint32(f.Promotes)&promoteMask<<promoteShift |
-		uint32(f.Castle)&castleMask<<castleShift |
-		uint32(f.Check)&checkMask<<checkShift |
+	return uint16(f.Moves)&moveMask<<moveShift |
+		uint16(f.Captures)&captureMask<<captureShift |
+		uint16(f.Promotes)&promoteMask<<promoteShift |
+		uint16(f.Castle)&castleMask<<castleShift |
+		uint16(f.Check)&checkMask<<checkShift |
 		epFlag&enPassantMask<<enPassantShift |
 		drawFlag&drawMask<<drawShift
 }
@@ -307,7 +301,7 @@ func (f MoveFlags) Compress() uint32 {
 // Move structure
 type Move struct {
 	From, To Coord
-	flags    uint32
+	flags    uint16
 }
 
 var moveRegex = regexp.MustCompile(`^(?P<Move>(?P<Piece>[NBRQK]?)(?:(?P<FileSpecifier>[a-h])?(?P<RankSpecifier>[1-8])?)(?P<Takes>x?)(?P<Destination>[a-h][1-8])(?:=?(?P<Promotion>[NBRQ]))?|(?P<Castle>[0O](?:-[0O]){1,2}))(?P<Check>\+{0,2}|#)(?P<EnPassant> e\.p\.)?(?P<DrawOffer> \(=\))?$`)
@@ -390,10 +384,6 @@ func MoveFromString(s string, board *Board) (move Move, err error) {
 	// Takes
 	if i := moveRegex.SubexpIndex("Takes"); i != -1 && matches[i] != "" {
 		pieceType := board.At(move.To).Type()
-		if pieceType == NoType {
-			return move, fmt.Errorf("cannot take on empty square")
-		}
-
 		moveFlags.Captures = pieceType
 	}
 
@@ -423,7 +413,7 @@ func MoveFromString(s string, board *Board) (move Move, err error) {
 		for _, c := range candidates {
 			if c.To == move.To && (file == -1 || c.From.File() == file) && (rank == -1 || c.From.Rank() == rank) {
 				if move.From != NoCoord {
-					return move, fmt.Errorf("move is ambiguous")
+					return move, fmt.Errorf("move is ambiguous: %v and %v can both move to that square\n\t%v", move.From, c.From, candidates)
 				}
 				move.From = c.From
 			}
@@ -585,6 +575,13 @@ func (c *Castles) String() string {
 // --------------------------------------------------------
 //
 
+type moveState struct {
+	Move
+	CastleRights    Castles
+	EnPassantTarget Coord
+	HalfmoveClock   int
+}
+
 // A chess board structure
 // Keeps track of piece positions, board orientation,
 // side-to-move, castling ability, en passant target,
@@ -599,7 +596,7 @@ type Board struct {
 	HalfmoveClock   int
 	FullmoveCounter int
 
-	history []Move
+	history []moveState
 }
 
 func NewBoard() *Board {
@@ -607,7 +604,7 @@ func NewBoard() *Board {
 	board.Orientation = White
 	board.SideToMove = White
 	board.FullmoveCounter = 1
-	board.history = make([]Move, 0, 128)
+	board.history = make([]moveState, 0, 128)
 
 	return board
 }

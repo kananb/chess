@@ -14,20 +14,22 @@ var promoteTypes = [...]PieceType{
 	Knight, Bishop, Rook, Queen,
 }
 
-func (board *Board) getPieceIndices(types ...PieceType) []int {
+func (board *Board) getPieceIndices(side SideColor, types ...PieceType) []int {
 	pieces := make([]int, 0, 16)
 
 	for i := 0; i < len(board.squares); i++ {
-		if board.squares[i].Color() == board.SideToMove {
-			if len(types) == 0 {
+		if board.squares[i].Color() != side {
+			continue
+		}
+
+		if len(types) == 0 {
+			pieces = append(pieces, i)
+			continue
+		}
+		for _, t := range types {
+			if board.squares[i].Type() == t {
 				pieces = append(pieces, i)
-				continue
-			}
-			for _, t := range types {
-				if board.squares[i].Type() == t {
-					pieces = append(pieces, i)
-					break
-				}
+				break
 			}
 		}
 	}
@@ -174,7 +176,7 @@ func (board *Board) genKingMoves(pieces []int) []Move {
 func (board *Board) genPseudoMoves(types ...PieceType) []Move {
 	moveSet := make([]Move, 0, 128)
 
-	pieces := board.getPieceIndices(types...)
+	pieces := board.getPieceIndices(board.SideToMove, types...)
 
 	moveSet = append(moveSet, board.genPawnMoves(pieces)...)
 	moveSet = append(moveSet, board.genKnightMoves(pieces)...)
@@ -232,6 +234,7 @@ func (board *Board) kingInCheck(side SideColor) bool {
 func (board *Board) GenMoves() []Move {
 	pseudoMoves := board.genPseudoMoves()
 	moveSet := make([]Move, 0, len(pseudoMoves))
+	side := board.SideToMove
 
 	for _, move := range pseudoMoves {
 		isLegal := true
@@ -242,14 +245,14 @@ func (board *Board) GenMoves() []Move {
 				off = -1
 			}
 
-			if board.kingInCheck(board.SideToMove) {
+			if board.kingInCheck(side) {
 				isLegal = false
 			} else {
 				if err := board.MakeMove(NewMove(move.From, NewCoord(move.From.File()+off, move.From.Rank()), MoveFlags{Moves: King})); err != nil {
 					isLegal = false
 				}
 
-				if board.kingInCheck(board.SideToMove) {
+				if board.kingInCheck(side) {
 					isLegal = false
 				}
 				board.UnmakeMove()
@@ -261,7 +264,7 @@ func (board *Board) GenMoves() []Move {
 				panic(fmt.Sprintf("invalid move generated: %v", err))
 			}
 
-			if board.kingInCheck(board.SideToMove) {
+			if board.kingInCheck(side) {
 				isLegal = false
 			}
 			if _, ok := board.UnmakeMove(); !ok {
@@ -276,13 +279,17 @@ func (board *Board) GenMoves() []Move {
 
 	return moveSet
 }
-func (board *Board) CountMoves(depth, maxDepth int) (int, []int) {
-	if depth >= maxDepth {
-		return 0, nil
+func (board *Board) CountMoves(depth int) (int, []int) {
+	if depth <= 0 {
+		return 1, nil
 	}
 
 	moves := board.GenMoves()
-	count, breakdown := len(moves), make([]int, 8)
+	// if depth == 1 {
+	// 	return len(moves), []int{}
+	// }
+
+	count, breakdown := 0, make([]int, 8)
 	for _, move := range moves {
 		if err := board.MakeMove(move); err != nil {
 			panic("invalid move generated")
@@ -301,7 +308,7 @@ func (board *Board) CountMoves(depth, maxDepth int) (int, []int) {
 			breakdown[3]++
 		}
 
-		amount, parts := board.CountMoves(depth+1, maxDepth)
+		amount, parts := board.CountMoves(depth - 1)
 		count += amount
 		for i := 0; i < len(parts); i++ {
 			breakdown[i] += parts[i]
@@ -317,6 +324,7 @@ func (board *Board) MakeMove(move Move) (err error) {
 	if move.From == NoCoord || move.To == NoCoord {
 		return fmt.Errorf("invalid move coordinates")
 	}
+	turn := moveState{move, board.CastleRights, board.EnPassantTarget, board.HalfmoveClock}
 
 	movePiece := *board.At(move.From)
 	if move.Moves() != movePiece.Type() {
@@ -385,7 +393,6 @@ func (board *Board) MakeMove(move Move) (err error) {
 		}
 	}
 
-	move.flags = (move.flags &^ (prevRightsMask << prevRightsShift)) | (uint32(board.CastleRights.ToWord()) << prevRightsShift)
 	if movePiece.Type() == King {
 		board.CastleRights.Disallow(board.SideToMove, Kingside)
 		board.CastleRights.Disallow(board.SideToMove, Queenside)
@@ -422,12 +429,11 @@ func (board *Board) MakeMove(move Move) (err error) {
 	} else {
 		board.HalfmoveClock++
 	}
-	move.flags = (move.flags &^ (plyMask << plyShift)) | (uint32(board.HalfmoveClock) << plyShift)
 
 	if board.history == nil {
-		board.history = make([]Move, 0, 128)
+		board.history = make([]moveState, 0, 128)
 	}
-	board.history = append(board.history, move)
+	board.history = append(board.history, turn)
 
 	return
 }
@@ -437,31 +443,37 @@ func (board *Board) UnmakeMove() (Move, bool) {
 	}
 
 	i := len(board.history) - 1
-	move := board.history[i]
+	turn := board.history[i]
 
-	to, from := board.At(move.To), board.At(move.From)
-	if move.PromotesTo() == NoType {
+	to, from := board.At(turn.To), board.At(turn.From)
+	if turn.PromotesTo() == NoType {
 		*from = *to
 	} else {
 		*from = NewPiece(to.Color(), Pawn)
 	}
 
-	if move.Captures() != NoType {
-		*to = NewPiece(board.SideToMove, move.Captures())
+	if turn.Captures() != NoType {
+		*to = NewPiece(board.SideToMove, turn.Captures())
 	} else {
 		*to = NoPiece
 	}
 
-	if move.CastlesTo() == Kingside {
-		rook := board.At(NewCoord(5, move.To.Rank()))
-		corner := board.At(NewCoord(7, move.To.Rank()))
+	if turn.CastlesTo() == Kingside {
+		rook := board.At(NewCoord(5, turn.To.Rank()))
+		corner := board.At(NewCoord(7, turn.To.Rank()))
 		*corner = *rook
 		*rook = NoPiece
-	} else if move.CastlesTo() == Queenside {
-		rook := board.At(NewCoord(3, move.To.Rank()))
-		corner := board.At(NewCoord(0, move.To.Rank()))
+	} else if turn.CastlesTo() == Queenside {
+		rook := board.At(NewCoord(3, turn.To.Rank()))
+		corner := board.At(NewCoord(0, turn.To.Rank()))
 		*corner = *rook
 		*rook = NoPiece
+	}
+
+	if turn.IsEnPassant() {
+		passant := NewCoord(turn.To.File(), turn.From.Rank())
+		*board.At(passant) = NewPiece(board.SideToMove, Pawn)
+		board.EnPassantTarget = NewCoord(turn.To.File(), turn.From.Rank())
 	}
 
 	board.SideToMove ^= 0b11
@@ -469,15 +481,10 @@ func (board *Board) UnmakeMove() (Move, bool) {
 		board.FullmoveCounter--
 	}
 
-	if move.IsEnPassant() {
-		passant := NewCoord(move.To.File(), move.From.Rank())
-		*board.At(passant) = NewPiece(board.SideToMove, Pawn)
-		board.EnPassantTarget = NewCoord(move.To.File(), move.From.Rank())
-	}
-
-	board.CastleRights = CastlesFromWord(uint8(move.flags >> prevRightsShift & prevRightsMask))
-	board.HalfmoveClock = int(move.flags >> plyShift & plyMask)
+	board.CastleRights = turn.CastleRights
+	board.EnPassantTarget = turn.EnPassantTarget
+	board.HalfmoveClock = turn.HalfmoveClock
 
 	board.history = board.history[:i]
-	return move, true
+	return turn.Move, true
 }

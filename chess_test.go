@@ -496,11 +496,11 @@ func TestCountMoves(t *testing.T) {
 			3,
 			97862,
 		},
-		// {
-		// 	"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-		// 	4,
-		// 	4085603,
-		// },
+		{
+			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+			4,
+			4085603,
+		},
 		{
 			"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
 			1,
@@ -516,41 +516,41 @@ func TestCountMoves(t *testing.T) {
 			3,
 			2812,
 		},
-		// {
-		// 	"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
-		// 	5,
-		// 	674624,
-		// },
 		{
-			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+			"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+			6,
+			11030083,
+		},
+		{
+			"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
 			1,
-			44,
+			6,
 		},
 		{
-			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+			"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
 			2,
-			1486,
+			264,
 		},
 		{
-			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+			"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
 			3,
-			62379,
+			9467,
 		},
-		// {
-		// 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-		// 	4,
-		// 	2103487,
-		// },
-		// {
-		// 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-		// 	5,
-		// 	89941194,
-		// },
+		{
+			"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+			4,
+			422333,
+		},
+		{
+			"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+			5,
+			15833292,
+		},
 	}
 
 	for _, test := range tests {
 		board, _ := BoardFromString(test.position)
-		if got, breakdown := board.CountMoves(0, test.depth); got != test.want {
+		if got, breakdown := board.CountMoves(test.depth); got != test.want {
 			t.Errorf("CountMoves() on [d=%d] %q = %d, want %d\n\t%v", test.depth, test.position, got, test.want, breakdown)
 		}
 	}
@@ -587,6 +587,6 @@ func BenchmarkCountMoves(b *testing.B) {
 	board := StartingPosition()
 
 	for i := 0; i < b.N; i++ {
-		board.CountMoves(0, 1)
+		board.CountMoves(1)
 	}
 }
