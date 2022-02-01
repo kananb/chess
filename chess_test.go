@@ -9,24 +9,24 @@ func TestPieceString(t *testing.T) {
 		piece Piece
 		want  string
 	}{
-		{NewPiece(White, Pawn), "P"},
-		{NewPiece(White, Knight), "N"},
-		{NewPiece(White, Bishop), "B"},
-		{NewPiece(White, Rook), "R"},
-		{NewPiece(White, Queen), "Q"},
-		{NewPiece(White, King), "K"},
+		{Piece{White, Pawn}, "P"},
+		{Piece{White, Knight}, "N"},
+		{Piece{White, Bishop}, "B"},
+		{Piece{White, Rook}, "R"},
+		{Piece{White, Queen}, "Q"},
+		{Piece{White, King}, "K"},
 
-		{NewPiece(Black, Pawn), "p"},
-		{NewPiece(Black, Knight), "n"},
-		{NewPiece(Black, Bishop), "b"},
-		{NewPiece(Black, Rook), "r"},
-		{NewPiece(Black, Queen), "q"},
-		{NewPiece(Black, King), "k"},
+		{Piece{Black, Pawn}, "p"},
+		{Piece{Black, Knight}, "n"},
+		{Piece{Black, Bishop}, "b"},
+		{Piece{Black, Rook}, "r"},
+		{Piece{Black, Queen}, "q"},
+		{Piece{Black, King}, "k"},
 	}
 
 	for _, test := range tests {
 		if got := test.piece.String(); got != test.want {
-			t.Errorf("Piece{Type: %v, Color: %v}.String() = %q, want %q", test.piece.Type(), test.piece.Color(), got, test.want)
+			t.Errorf("Piece{Type: %v, Color: %v}.String() = %q, want %q", test.piece.Name, test.piece.Color, got, test.want)
 		}
 	}
 }
@@ -36,36 +36,36 @@ func TestBoardAt(t *testing.T) {
 		coord Coord
 		want  Piece
 	}{
-		{NewCoord(0, 0), NewPiece(White, Rook)},
-		{NewCoord(1, 0), NewPiece(White, Knight)},
-		{NewCoord(2, 0), NewPiece(White, Bishop)},
-		{NewCoord(3, 0), NewPiece(White, Queen)},
-		{NewCoord(4, 0), NewPiece(White, King)},
-		{NewCoord(5, 0), NewPiece(White, Bishop)},
-		{NewCoord(6, 0), NewPiece(White, Knight)},
-		{NewCoord(7, 0), NewPiece(White, Rook)},
+		{Coord{1, 1}, Piece{White, Rook}},
+		{Coord{2, 1}, Piece{White, Knight}},
+		{Coord{3, 1}, Piece{White, Bishop}},
+		{Coord{4, 1}, Piece{White, Queen}},
+		{Coord{5, 1}, Piece{White, King}},
+		{Coord{6, 1}, Piece{White, Bishop}},
+		{Coord{7, 1}, Piece{White, Knight}},
+		{Coord{8, 1}, Piece{White, Rook}},
 
-		{NewCoord(0, 7), NewPiece(Black, Rook)},
-		{NewCoord(1, 7), NewPiece(Black, Knight)},
-		{NewCoord(2, 7), NewPiece(Black, Bishop)},
-		{NewCoord(3, 7), NewPiece(Black, Queen)},
-		{NewCoord(4, 7), NewPiece(Black, King)},
-		{NewCoord(5, 7), NewPiece(Black, Bishop)},
-		{NewCoord(6, 7), NewPiece(Black, Knight)},
-		{NewCoord(7, 7), NewPiece(Black, Rook)},
+		{Coord{1, 8}, Piece{Black, Rook}},
+		{Coord{2, 8}, Piece{Black, Knight}},
+		{Coord{3, 8}, Piece{Black, Bishop}},
+		{Coord{4, 8}, Piece{Black, Queen}},
+		{Coord{5, 8}, Piece{Black, King}},
+		{Coord{6, 8}, Piece{Black, Bishop}},
+		{Coord{7, 8}, Piece{Black, Knight}},
+		{Coord{8, 8}, Piece{Black, Rook}},
 
-		{NewCoord(1, 1), NewPiece(White, Pawn)},
-		{NewCoord(2, 2), Piece(0)},
-		{NewCoord(3, 3), Piece(0)},
-		{NewCoord(4, 4), Piece(0)},
-		{NewCoord(5, 5), Piece(0)},
-		{NewCoord(6, 6), NewPiece(Black, Pawn)},
+		{Coord{2, 2}, Piece{White, Pawn}},
+		{Coord{3, 3}, Piece{0, 0}},
+		{Coord{4, 4}, Piece{0, 0}},
+		{Coord{5, 5}, Piece{0, 0}},
+		{Coord{6, 6}, Piece{0, 0}},
+		{Coord{7, 7}, Piece{Black, Pawn}},
 	}
 
 	board := StartingPosition()
 	for _, test := range tests {
 		if got := board.At(test.coord); *got != test.want {
-			t.Errorf("Board.Get(Coord{%d, %d}) = %v, want %v", test.coord.File(), test.coord.Rank(), got, test.want)
+			t.Errorf("Board.Get(Coord{%d, %d}) = %v, want %v", test.coord.File, test.coord.Rank, got, test.want)
 		}
 	}
 }
@@ -100,14 +100,14 @@ func TestBoardAt(t *testing.T) {
 
 // 	want := Board{
 // 		squares: [64]Piece{
-// 			NewPiece(White, Rook), NewPiece(White, Knight), Piece(0), NewPiece(White, Queen), NewPiece(White, King), NewPiece(White, Bishop), NewPiece(White, Knight), NewPiece(White, Rook),
-// 			NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn),
-// 			Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-// 			Piece(0), Piece(0), Piece(0), NewPiece(White, Pawn), NewPiece(Black, Pawn), NewPiece(White, Bishop), Piece(0), Piece(0),
-// 			Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-// 			Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-// 			NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), Piece(0), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
-// 			NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
+// 			Piece{White, Rook}, Piece{White, Knight}, Piece{0, 0}, Piece{White, Queen}, Piece{White, King}, Piece{White, Bishop}, Piece{White, Knight}, Piece{White, Rook},
+// 			Piece{White, Pawn}, Piece{White, Pawn}, Piece{White, Pawn}, Piece{0, 0}, Piece{0, 0}, Piece{White, Pawn}, Piece{White, Pawn}, Piece{White, Pawn},
+// 			Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0},
+// 			Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{White, Pawn}, Piece{Black, Pawn}, Piece{White, Bishop}, Piece{0, 0}, Piece{0, 0},
+// 			Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0},
+// 			Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0}, Piece{0, 0},
+// 			Piece{Black, Pawn}, Piece{Black, Pawn}, Piece{Black, Pawn}, Piece{0, 0}, Piece{Black, Pawn}, Piece{Black, Pawn}, Piece{Black, Pawn}, Piece{Black, Pawn},
+// 			Piece{Black, Rook}, Piece{Black, Knight}, Piece{Black, Bishop}, Piece{Black, Queen}, Piece{Black, King}, Piece{Black, Bishop}, Piece{Black, Knight}, Piece{Black, Rook},
 // 		},
 // 	}
 
@@ -119,6 +119,28 @@ func TestBoardAt(t *testing.T) {
 // 		}
 // 	}
 // }
+
+func TestCastles(t *testing.T) {
+	castles := Castles(0)
+
+	if castles&15 != 0 {
+		t.Errorf("Castles.Can(White, Kingside) != 0")
+	}
+
+	castles.Allow(Black, Kingside)
+	if castles&15 != 0b0100 {
+		t.Errorf("Castles.Allow(Black, Kingside) = %04b, want 0100", castles)
+	}
+
+	if got := castles.Can(Black, Kingside); got == false {
+		t.Error("Castles.Can(Black, Kingside) != true")
+	}
+
+	castles.Disallow(Black, Kingside)
+	if castles&15 != 0 {
+		t.Errorf("Castles.Disallow(Black, Kingside) != 0")
+	}
+}
 
 func TestBoardToFEN(t *testing.T) {
 	tests := []struct {
@@ -132,17 +154,17 @@ func TestBoardToFEN(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Knight), Piece(0), Piece(0), NewPiece(Black, Pawn),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {White, Pawn}, {White, Pawn}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, Knight}, {0, 0}, {0, 0}, {Black, Pawn},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      White,
-				CastleRights:    [4]bool{false, false, false, false},
+				CastleRights:    NewCastles("-"),
 				FullmoveCounter: 1,
 			},
 			"8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 0 1",
@@ -150,17 +172,17 @@ func TestBoardToFEN(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{White, Rook}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {White, Rook},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{Black, Rook}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      White,
-				CastleRights:    [4]bool{true, true, false, true},
+				CastleRights:    NewCastles("KQq"),
 				FullmoveCounter: 1,
 			},
 			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
@@ -168,17 +190,17 @@ func TestBoardToFEN(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{White, Rook}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {White, Rook},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      White,
-				CastleRights:    [4]bool{true, true, false, false},
+				CastleRights:    NewCastles("KQ"),
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
@@ -186,17 +208,17 @@ func TestBoardToFEN(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{White, Rook}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      Black,
-				CastleRights:    [4]bool{false, true, false, false},
+				CastleRights:    NewCastles("Q"),
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
@@ -204,17 +226,17 @@ func TestBoardToFEN(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      Black,
-				CastleRights:    [4]bool{false, false, false, false},
+				CastleRights:    NewCastles("-"),
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
@@ -222,8 +244,8 @@ func TestBoardToFEN(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.board.FEN(); got != test.want {
-			t.Errorf("Board.FEN() = %q, want %q", got, test.want)
+		if got := test.board.String(); got != test.want {
+			t.Errorf("Board.String() = %q, want %q", got, test.want)
 		}
 	}
 }
@@ -240,17 +262,17 @@ func TestFENToBoard(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Knight), Piece(0), Piece(0), NewPiece(Black, Pawn),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {White, Pawn}, {White, Pawn}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, Knight}, {0, 0}, {0, 0}, {Black, Pawn},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      White,
-				CastleRights:    [4]bool{false, false, false, false},
+				CastleRights:    NewCastles("-"),
 				HalfmoveClock:   5,
 				FullmoveCounter: 13,
 			},
@@ -259,17 +281,17 @@ func TestFENToBoard(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					NewPiece(Black, Rook), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{White, Rook}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {White, Rook},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{Black, Rook}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      White,
-				CastleRights:    [4]bool{true, true, false, true},
+				CastleRights:    NewCastles("KQq"),
 				FullmoveCounter: 1,
 			},
 			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
@@ -277,17 +299,17 @@ func TestFENToBoard(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), NewPiece(White, Rook),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{White, Rook}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {White, Rook},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      White,
-				CastleRights:    [4]bool{true, true, false, false},
+				CastleRights:    NewCastles("KQ"),
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
@@ -295,17 +317,17 @@ func TestFENToBoard(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					NewPiece(White, Rook), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{White, Rook}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      Black,
-				CastleRights:    [4]bool{false, true, false, false},
+				CastleRights:    NewCastles("Q"),
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
@@ -313,17 +335,17 @@ func TestFENToBoard(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(White, King), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, King), Piece(0), Piece(0), Piece(0),
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {White, King}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
 				SideToMove:      Black,
-				CastleRights:    [4]bool{false, false, false, false},
+				CastleRights:    NewCastles("-"),
 				FullmoveCounter: 1,
 			},
 			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
@@ -331,18 +353,18 @@ func TestFENToBoard(t *testing.T) {
 		{
 			&Board{
 				squares: [64]Piece{
-					NewPiece(White, Rook), NewPiece(White, Knight), NewPiece(White, Bishop), NewPiece(White, Queen), NewPiece(White, King), NewPiece(White, Bishop), NewPiece(White, Knight), NewPiece(White, Rook),
-					NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), Piece(0), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn), NewPiece(White, Pawn),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), NewPiece(White, Pawn), NewPiece(Black, Pawn), Piece(0), Piece(0), Piece(0),
-					Piece(0), Piece(0), Piece(0), Piece(0), Piece(0), NewPiece(Black, Pawn), Piece(0), Piece(0),
-					NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), NewPiece(Black, Pawn), Piece(0), Piece(0), NewPiece(Black, Pawn), NewPiece(Black, Pawn),
-					NewPiece(Black, Rook), NewPiece(Black, Knight), NewPiece(Black, Bishop), NewPiece(Black, Queen), NewPiece(Black, King), NewPiece(Black, Bishop), NewPiece(Black, Knight), NewPiece(Black, Rook),
+					{White, Rook}, {White, Knight}, {White, Bishop}, {White, Queen}, {White, King}, {White, Bishop}, {White, Knight}, {White, Rook},
+					{White, Pawn}, {White, Pawn}, {White, Pawn}, {0, 0}, {White, Pawn}, {White, Pawn}, {White, Pawn}, {White, Pawn},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {White, Pawn}, {Black, Pawn}, {0, 0}, {0, 0}, {0, 0},
+					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, Pawn}, {0, 0}, {0, 0},
+					{Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {0, 0}, {0, 0}, {Black, Pawn}, {Black, Pawn},
+					{Black, Rook}, {Black, Knight}, {Black, Bishop}, {Black, Queen}, {Black, King}, {Black, Bishop}, {Black, Knight}, {Black, Rook},
 				},
 				SideToMove:      White,
-				CastleRights:    [4]bool{true, true, true, true},
-				EnPassantTarget: NewCoord(4, 5),
+				CastleRights:    NewCastles("KQkq"),
+				EnPassantTarget: NewCoord("e6"),
 				FullmoveCounter: 3,
 			},
 			"rnbqkbnr/pppp2pp/5p2/3Pp3/8/8/PPP1PPPP/RNBQKBNR w KQkq e6 0 3",
@@ -358,35 +380,35 @@ func TestFENToBoard(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := BoardFromString(test.fen)
+		got, err := NewBoard(test.fen)
 
 		if got == nil || test.want == nil {
 			if got != test.want {
 				if err != nil {
 					t.Log(err)
 				}
-				t.Errorf("BoardFromString(%q) =\n%v, want\n%v", test.fen, got, test.want)
+				t.Errorf("NewBoard(%q) =\n%v, want\n%v", test.fen, got, test.want)
 			}
 		} else {
 			// check piece placement
 			for i := 0; i < len(got.squares); i++ {
 				if got.squares[i] != test.want.squares[i] {
-					t.Errorf("BoardFromString(%q) =\n%v, want\n%v", test.fen, got, test.want)
+					t.Errorf("NewBoard(%q) =\n%v, want\n%v", test.fen, got, test.want)
 					break
 				}
 			}
 
 			// check metadata
 			if got.SideToMove != test.want.SideToMove {
-				t.Errorf("BoardFromString(%q).SideToMove = %v, want %v", test.fen, got.SideToMove, test.want.SideToMove)
+				t.Errorf("NewBoard(%q).SideToMove = %v, want %v", test.fen, got.SideToMove, test.want.SideToMove)
 			} else if got.CastleRights != test.want.CastleRights {
-				t.Errorf("BoardFromString(%q).CastleRights = %v, want %v", test.fen, got.CastleRights, test.want.CastleRights)
+				t.Errorf("NewBoard(%q).CastleRights = %v, want %v", test.fen, got.CastleRights, test.want.CastleRights)
 			} else if got.EnPassantTarget != test.want.EnPassantTarget {
-				t.Errorf("BoardFromString(%q).EnPassantTarget = %v, want %v", test.fen, got.EnPassantTarget, test.want.EnPassantTarget)
+				t.Errorf("NewBoard(%q).EnPassantTarget = %v, want %v", test.fen, got.EnPassantTarget, test.want.EnPassantTarget)
 			} else if got.HalfmoveClock != test.want.HalfmoveClock {
-				t.Errorf("BoardFromString(%q).HalfmoveClock = %v, want %v", test.fen, got.HalfmoveClock, test.want.HalfmoveClock)
+				t.Errorf("NewBoard(%q).HalfmoveClock = %v, want %v", test.fen, got.HalfmoveClock, test.want.HalfmoveClock)
 			} else if got.FullmoveCounter != test.want.FullmoveCounter {
-				t.Errorf("BoardFromString(%q).SideToMove = %v, want %v", test.fen, got.FullmoveCounter, test.want.FullmoveCounter)
+				t.Errorf("NewBoard(%q).SideToMove = %v, want %v", test.fen, got.FullmoveCounter, test.want.FullmoveCounter)
 			}
 		}
 	}
@@ -398,22 +420,26 @@ func TestCoord(t *testing.T) {
 		wantFile  int
 		wantRank  int
 		wantIndex int
+		valid     bool
 	}{
-		{NewCoord(0, 0), 0, 0, 0},
-		{NewCoord(1, 0), 1, 0, 1},
-		{NewCoord(2, 1), 2, 1, 10},
-		{NewCoord(3, 1), 3, 1, 11},
-		{NewCoord(0, 2), 0, 2, 16},
-		{NewCoord(0, 3), 0, 3, 24},
-		{NewCoord(7, 4), 7, 4, 39},
-		{NewCoord(-1, 9), 0, 0, 0},
+		{Coord{1, 1}, 1, 1, 0, true},
+		{Coord{2, 1}, 2, 1, 1, true},
+		{Coord{3, 2}, 3, 2, 10, true},
+		{Coord{4, 2}, 4, 2, 11, true},
+		{Coord{1, 3}, 1, 3, 16, true},
+		{Coord{1, 4}, 1, 4, 24, true},
+		{Coord{8, 5}, 8, 5, 39, true},
+		{Coord{-1, 9}, 0, 0, 0, false},
 	}
 
 	for _, test := range tests {
-		gotFile := test.coord.File()
-		gotRank := test.coord.Rank()
-		gotIndex := test.coord.index()
-		if gotFile != test.wantFile || gotRank != test.wantRank || gotIndex != test.wantIndex {
+		if test.coord.IsValid() != test.valid {
+			t.Errorf("Coord{File: %d, Rank: %d}.IsValid() != %v", test.wantFile, test.wantRank, test.valid)
+		}
+		gotFile := test.coord.File
+		gotRank := test.coord.Rank
+		gotIndex := test.coord.Index()
+		if test.coord.IsValid() && (gotFile != test.wantFile || gotRank != test.wantRank || gotIndex != test.wantIndex) {
 			t.Errorf("Coord{File: %d, Rank: %d, Index: %d} != {%d, %d, %d}", gotFile, gotRank, gotIndex, test.wantFile, test.wantRank, test.wantIndex)
 		}
 	}
@@ -426,12 +452,12 @@ func TestUnmakeMove(t *testing.T) {
 	}{
 		{
 			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-			NewMove(NewCoord(4, 0), NewCoord(6, 0), MoveFlags{Moves: King, Castle: Kingside}),
+			Move{Coord{5, 1}, Coord{7, 1}, MoveFlags{Moves: King, Castle: Kingside}},
 		},
 	}
 
 	for _, test := range tests {
-		board, _ := BoardFromString(test.position)
+		board, _ := NewBoard(test.position)
 		apply := *board
 
 		if err := apply.MakeMove(test.move); err != nil {
@@ -440,7 +466,7 @@ func TestUnmakeMove(t *testing.T) {
 		apply.UnmakeMove()
 
 		if board.squares != apply.squares {
-			t.Errorf("board squares don't match: %q != %q", board.FEN(), apply.FEN())
+			t.Errorf("board squares don't match: %q != %q", board.String(), apply.String())
 		}
 		if board.SideToMove != apply.SideToMove {
 			t.Errorf("moves sides don't match: %v != %v", board.SideToMove, apply.SideToMove)
@@ -549,7 +575,7 @@ func TestCountMoves(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		board, _ := BoardFromString(test.position)
+		board, _ := NewBoard(test.position)
 		if got, breakdown := board.CountMoves(test.depth); got != test.want {
 			t.Errorf("CountMoves() on [d=%d] %q = %d, want %d\n\t%v", test.depth, test.position, got, test.want, breakdown)
 		}
@@ -557,15 +583,15 @@ func TestCountMoves(t *testing.T) {
 }
 
 func BenchmarkMoveGen(b *testing.B) {
-	board, _ := BoardFromString("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
+	board, _ := NewBoard("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
 	for i := 0; i < b.N; i++ {
 		board.GenMoves()
 	}
 }
 
 func BenchmarkMakeUnmake(b *testing.B) {
-	board, _ := BoardFromString("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
-	move := NewMove(NewCoord(4, 0), NewCoord(4, 8), MoveFlags{Moves: Rook, Captures: Rook})
+	board, _ := NewBoard("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
+	move := Move{Coord{4, 0}, Coord{4, 8}, MoveFlags{Moves: Rook, Captures: Rook}}
 
 	for i := 0; i < b.N; i++ {
 		board.MakeMove(move)
@@ -574,8 +600,8 @@ func BenchmarkMakeUnmake(b *testing.B) {
 }
 
 func BenchmarkCopyUndo(b *testing.B) {
-	board, _ := BoardFromString("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
-	move := NewMove(NewCoord(4, 0), NewCoord(4, 8), MoveFlags{Moves: Rook, Captures: Rook})
+	board, _ := NewBoard("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
+	move := Move{Coord{4, 0}, Coord{4, 8}, MoveFlags{Moves: Rook, Captures: Rook}}
 
 	for i := 0; i < b.N; i++ {
 		temp := *board

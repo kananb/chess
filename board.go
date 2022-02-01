@@ -73,24 +73,24 @@ func (c *Castles) Allow(color SideColor, side CastleSide) {
 		return
 	}
 
-	mask := ^Castles(int(side) << ((int(color) - 1) * 2))
-	*c = *c&mask | 1
+	shift := (uint8(color)-1)*2 + uint8(side) - 1
+	*c |= 1 << shift
 }
 func (c *Castles) Disallow(color SideColor, side CastleSide) {
-	if (color != White && color != Black) || (side != Kingside && side != Queenside) {
+	if !color.IsValid() || !side.IsValid() {
 		return
 	}
 
-	mask := ^Castles(int(side) << ((int(color) - 1) * 2))
+	mask := Castles(^(uint8(side) << ((uint8(color) - 1) * 2)) & 15)
 	*c = *c & mask
 }
 func (c *Castles) Can(color SideColor, side CastleSide) bool {
-	if (color != White && color != Black) || (side != Kingside && side != Queenside) {
+	if !color.IsValid() || !side.IsValid() {
 		return false
 	}
 
-	mask := ^Castles(int(side) << ((int(color) - 1) * 2))
-	return *c&mask == 1
+	mask := Castles((uint8(side) << ((uint8(color) - 1) * 2)) & 15)
+	return *c&mask != 0
 }
 
 func (c *Castles) String() string {
@@ -139,7 +139,7 @@ type Board struct {
 	history []moveState
 }
 
-var fenexp = regexp.MustCompile(`^(?P<PiecePlacement>(?:[pnbrqkPNBRQK1-8]{1,8}\/){7}[pnbrqkPNBRQK1-8]{1,8})\s+(?P<SideToMove>b|w)\s+(?P<Castling>-|K?Q?k?q)\s+(?P<EnPassant>-|[a-h][3-6])\s+(?P<HalfMoveClock>\d+)\s+(?P<FullMoveNumber>\d+)\s*$`)
+var fenexp = regexp.MustCompile(`^(?P<PiecePlacement>(?:[pnbrqkPNBRQK1-8]{1,8}\/){7}[pnbrqkPNBRQK1-8]{1,8})\s+(?P<SideToMove>b|w)\s+(?P<Castling>-|K?Q?k?q?)\s+(?P<EnPassant>-|[a-h][3-6])\s+(?P<HalfmoveClock>\d+)\s+(?P<FullmoveCounter>\d+)\s*$`)
 
 func NewBoard(fen string) (board *Board, err error) {
 	board = new(Board)
@@ -152,7 +152,7 @@ func NewBoard(fen string) (board *Board, err error) {
 		return
 	}
 
-	matches := moveexp.FindStringSubmatch(fen)
+	matches := fenexp.FindStringSubmatch(fen)
 	if matches == nil {
 		return nil, fmt.Errorf("invalid FEN string")
 	}
@@ -164,7 +164,7 @@ func NewBoard(fen string) (board *Board, err error) {
 				f += int(symbol - '0')
 			} else {
 				piece := NewPiece(string(symbol))
-				if !piece.IsValid() {
+				if piece.IsValid() {
 					board.squares[r*8+f] = piece
 					f++
 				} else if symbol != '/' {

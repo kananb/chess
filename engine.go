@@ -52,7 +52,7 @@ func (board *Board) genPawnMoves(pieces []int) []Move {
 		from := indexCoord(i)
 		to := Coord{from.File, from.Rank + dir}
 		if to.IsValid() && board.At(to).IsValid() {
-			if to.Rank == 0 || to.Rank == 7 {
+			if to.Rank == 1 || to.Rank == 8 {
 				for _, t := range promoteTypes {
 					moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn, Promotes: t}})
 				}
