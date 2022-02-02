@@ -165,7 +165,7 @@ func NewMove(san string, board *Board) (move Move, err error) {
 
 		for _, c := range candidates {
 			if c.To == move.To && (file == -1 || c.From.File == file) && (rank == -1 || c.From.Rank == rank) {
-				if !move.From.IsValid() {
+				if move.From.IsValid() {
 					return move, fmt.Errorf("Move is ambiguous")
 				}
 				move.From = c.From

@@ -604,6 +604,17 @@ func TestCountMoves(t *testing.T) {
 	}
 }
 
+func TestMoveFromSAN(t *testing.T) {
+	board := StartingPosition()
+	move, err := NewMove("e4", board)
+
+	if err != nil {
+		t.Errorf("NewMove(e4) gives error, %v", err)
+	} else if !move.Matches(Move{NewCoord("e2"), NewCoord("e4"), MoveFlags{}}) {
+		t.Errorf("NewMove(e4) = %v", move)
+	}
+}
+
 func BenchmarkMoveGen(b *testing.B) {
 	board, _ := NewBoard("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
 	for i := 0; i < b.N; i++ {
