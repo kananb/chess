@@ -18,7 +18,7 @@ func NewCoord(c string) Coord {
 	return Coord{int(c[0]-'a') + 1, int(c[1]-'1') + 1}
 }
 func indexCoord(i int) Coord {
-	return Coord{i & 7, i / 8}
+	return Coord{i&7 + 1, i/8 + 1}
 }
 
 func (c Coord) Index() int {
@@ -47,13 +47,13 @@ func (c CheckType) IsValid() bool {
 }
 
 type MoveFlags struct {
-	Moves     PieceName
-	Captures  PieceName
-	Promotes  PieceName
-	Castle    CastleSide
-	Check     CheckType
-	EnPassant bool
-	DrawOffer bool
+	Moves       PieceName
+	Captures    PieceName
+	PromotesTo  PieceName
+	CastlesTo   CastleSide
+	Check       CheckType
+	IsEnPassant bool
+	OffersDraw  bool
 }
 
 // Move structure
@@ -62,7 +62,7 @@ type Move struct {
 	MoveFlags
 }
 
-var moveexp = regexp.MustCompile(`^(?P<Move>(?P<Piece>[NBRQK]?)(?:(?P<FileSpecifier>[a-h])?(?P<RankSpecifier>[1-8])?)(?P<Takes>x?)(?P<Destination>[a-h][1-8])(?:=?(?P<Promotion>[NBRQ]))?|(?P<Castle>[0O](?:-[0O]){1,2}))(?P<Check>\+{0,2}|#)(?P<EnPassant> e\.p\.)?(?P<DrawOffer> \(=\))?$`)
+var moveexp = regexp.MustCompile(`^(?P<Move>(?P<Piece>[NBRQK]?)(?:(?P<FileSpecifier>[a-h])?(?P<RankSpecifier>[1-8])?)(?P<Takes>x?)(?P<Destination>[a-h][1-8])(?:=?(?P<Promotion>[NBRQ]))?|(?P<Castle>[0O](?:-[0O]){1,2}))(?P<Check>\+{0,2}|#)(?P<EnPassant> e\.p\.)?(?P<OffersDraw> \(=\))?$`)
 
 func NewMove(san string, board *Board) (move Move, err error) {
 	matches := moveexp.FindStringSubmatch(san)
@@ -71,13 +71,13 @@ func NewMove(san string, board *Board) (move Move, err error) {
 	}
 
 	// Draw offer
-	if i := moveexp.SubexpIndex("DrawOffer"); i != -1 && matches[i] != "" {
-		move.DrawOffer = true
+	if i := moveexp.SubexpIndex("OffersDraw"); i != -1 && matches[i] != "" {
+		move.OffersDraw = true
 	}
 
 	// En passant
 	if i := moveexp.SubexpIndex("EnPassant"); i != -1 && matches[i] != "" {
-		move.EnPassant = true
+		move.IsEnPassant = true
 	}
 
 	// Check
@@ -100,10 +100,10 @@ func NewMove(san string, board *Board) (move Move, err error) {
 		move.From = Coord{5, rank}
 
 		if matches[i] == "O-O" || matches[i] == "0-0" {
-			move.Castle = Kingside
+			move.CastlesTo = Kingside
 			move.To = Coord{7, rank}
 		} else if matches[i] == "O-O-O" || matches[i] == "0-0-0" {
-			move.Castle = Queenside
+			move.CastlesTo = Queenside
 			move.To = Coord{3, rank}
 		} else {
 			panic(fmt.Sprintf("invalid castle notation %q", matches[i]))
@@ -120,7 +120,7 @@ func NewMove(san string, board *Board) (move Move, err error) {
 			panic(fmt.Sprintf("invalid promotion notation %q, want [NBRQ]", matches[i]))
 		}
 
-		move.Promotes = pieceName
+		move.PromotesTo = pieceName
 	}
 
 	// Destination
@@ -161,7 +161,7 @@ func NewMove(san string, board *Board) (move Move, err error) {
 	move.From = Coord{file, rank}
 
 	if file == -1 || rank == -1 {
-		candidates := board.genPseudoMoves(move.Moves)
+		candidates := board.PseudoMoves(move.Moves)
 
 		for _, c := range candidates {
 			if c.To == move.To && (file == -1 || c.From.File == file) && (rank == -1 || c.From.Rank == rank) {
@@ -196,19 +196,19 @@ func (m Move) String() string {
 
 	buf := bytes.Buffer{}
 
-	if m.Castle == Kingside {
+	if m.CastlesTo == Kingside {
 		buf.WriteString("O-O")
-	} else if m.Castle == Queenside {
+	} else if m.CastlesTo == Queenside {
 		buf.WriteString("O-O-O")
 	} else {
-		buf.WriteString(m.Moves.String())
+		buf.WriteString(m.Moves.Abbreviation())
 		buf.WriteString(m.From.String())
 		if m.Captures.IsValid() {
 			buf.WriteString("x")
 		}
 		buf.WriteString(m.To.String())
-		if m.Promotes.IsValid() {
-			buf.WriteString("=" + m.Promotes.String())
+		if m.PromotesTo.IsValid() {
+			buf.WriteString("=" + m.PromotesTo.Abbreviation())
 		}
 	}
 
@@ -217,10 +217,10 @@ func (m Move) String() string {
 	} else if m.Check == Check {
 		buf.WriteString("+")
 	}
-	if !m.Castle.IsValid() && m.EnPassant {
+	if !m.CastlesTo.IsValid() && m.IsEnPassant {
 		buf.WriteString(" e.p.")
 	}
-	if m.DrawOffer {
+	if m.OffersDraw {
 		buf.WriteString(" (=)")
 	}
 

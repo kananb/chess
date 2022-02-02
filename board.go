@@ -115,11 +115,17 @@ func (c *Castles) String() string {
 	return buf.String()
 }
 
-type moveState struct {
-	Move
+type BoardData struct {
+	SideToMove      SideColor
 	CastleRights    Castles
 	EnPassantTarget Coord
 	HalfmoveClock   int
+	FullmoveCounter int
+}
+
+type BoardState struct {
+	Move
+	BoardData
 }
 
 // A chess board structure
@@ -127,26 +133,19 @@ type moveState struct {
 // side-to-move, castling ability, en passant target,
 // the halfmove clock, and fullmove counter
 type Board struct {
-	squares     [64]Piece
-	Orientation SideColor
+	squares [64]Piece
+	BoardData
 
-	SideToMove      SideColor
-	CastleRights    Castles
-	EnPassantTarget Coord
-	HalfmoveClock   int
-	FullmoveCounter int
-
-	history []moveState
+	history []BoardState
 }
 
 var fenexp = regexp.MustCompile(`^(?P<PiecePlacement>(?:[pnbrqkPNBRQK1-8]{1,8}\/){7}[pnbrqkPNBRQK1-8]{1,8})\s+(?P<SideToMove>b|w)\s+(?P<Castling>-|K?Q?k?q?)\s+(?P<EnPassant>-|[a-h][3-6])\s+(?P<HalfmoveClock>\d+)\s+(?P<FullmoveCounter>\d+)\s*$`)
 
 func NewBoard(fen string) (board *Board, err error) {
 	board = new(Board)
-	board.Orientation = White
 	board.SideToMove = White
 	board.FullmoveCounter = 1
-	board.history = make([]moveState, 0, 128)
+	board.history = make([]BoardState, 0, 128)
 
 	if fen == "" {
 		return
@@ -237,32 +236,40 @@ func (board *Board) At(c Coord) *Piece {
 	}
 	return &board.squares[c.Index()]
 }
-func (board *Board) Flip() {
-	if board.Orientation == White {
-		board.Orientation = Black
-	} else {
-		board.Orientation = White
+func (board *Board) pieceIndices(side SideColor, names ...PieceName) []int {
+	pieces := make([]int, 0, 16)
+
+	for i := 0; i < len(board.squares); i++ {
+		if board.squares[i].Color != side {
+			continue
+		}
+		if len(names) == 0 {
+			pieces = append(pieces, i)
+			continue
+		}
+
+		for _, name := range names {
+			if board.squares[i].Name == name {
+				pieces = append(pieces, i)
+				break
+			}
+		}
 	}
+
+	return pieces
 }
+
 func (board *Board) Ascii() string {
 	hdiv := "+---+---+---+---+---+---+---+---+\n"
 	buf := bytes.Buffer{}
 	buf.WriteString(hdiv)
 
 	for r := 7; r >= 0; r-- {
-		rank := r
-		if board.Orientation == Black {
-			rank = 7 - r
-		}
 
 		for f := 0; f < 8; f++ {
 			chars := []byte("|   ")
-			file := f
-			if board.Orientation == Black {
-				file = 7 - f
-			}
 
-			p := board.squares[rank*8+file]
+			p := board.squares[r*8+f]
 			if pstr := p.String(); pstr != "" {
 				chars[2] = pstr[0]
 			}
@@ -270,18 +277,13 @@ func (board *Board) Ascii() string {
 			buf.Write(chars)
 		}
 
-		buf.WriteString(fmt.Sprintf("|  %d\n", rank+1))
+		buf.WriteString(fmt.Sprintf("|  %d\n", r+1))
 		buf.WriteString(hdiv)
 	}
 
-	if board.Orientation == White {
-		buf.WriteString("  a   b   c   d   e   f   g   h\n")
-	} else {
-		buf.WriteString("  h   g   f   e   d   c   b   a\n")
-	}
+	buf.WriteString("  a   b   c   d   e   f   g   h\n")
 	return buf.String()
 }
-
 func (board *Board) String() string {
 	placement := bytes.Buffer{}
 
@@ -337,9 +339,10 @@ func StartingPosition() *Board {
 			{Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {Black, Pawn},
 			{Black, Rook}, {Black, Knight}, {Black, Bishop}, {Black, Queen}, {Black, King}, {Black, Bishop}, {Black, Knight}, {Black, Rook},
 		},
-		Orientation:     White,
-		SideToMove:      White,
-		CastleRights:    15,
-		FullmoveCounter: 1,
+		BoardData: BoardData{
+			SideToMove:      White,
+			CastleRights:    15,
+			FullmoveCounter: 1,
+		},
 	}
 }

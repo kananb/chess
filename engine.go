@@ -10,39 +10,19 @@ var knightOffsets = [...]struct{ f, r int }{
 	{1, 2}, {2, 1}, {2, -1}, {1, -2},
 	{-1, -2}, {-2, -1}, {-2, 1}, {-1, 2},
 }
+
 var promoteTypes = [...]PieceName{
 	Knight, Bishop, Rook, Queen,
 }
 
-func (board *Board) getPieceIndices(side SideColor, types ...PieceName) []int {
-	pieces := make([]int, 0, 16)
-
-	for i := 0; i < len(board.squares); i++ {
-		if board.squares[i].Color != side {
-			continue
-		}
-
-		if len(types) == 0 {
-			pieces = append(pieces, i)
-			continue
-		}
-		for _, t := range types {
-			if board.squares[i].Name == t {
-				pieces = append(pieces, i)
-				break
-			}
-		}
-	}
-
-	return pieces
-}
-func (board *Board) genPawnMoves(pieces []int) []Move {
+func (board *Board) pawnMoves(pieces []int) []Move {
 	moveSet := make([]Move, 0, 16)
 
 	dir := 1
 	if board.SideToMove == Black {
 		dir = -1
 	}
+
 	for _, i := range pieces {
 		piece := board.squares[i]
 		if piece.Name != Pawn {
@@ -51,34 +31,32 @@ func (board *Board) genPawnMoves(pieces []int) []Move {
 
 		from := indexCoord(i)
 		to := Coord{from.File, from.Rank + dir}
-		if to.IsValid() && board.At(to).IsValid() {
+		if to.IsValid() && !board.At(to).IsValid() {
 			if to.Rank == 1 || to.Rank == 8 {
 				for _, t := range promoteTypes {
-					moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn, Promotes: t}})
+					moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn, PromotesTo: t}})
 				}
 			} else {
 				moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn}})
 			}
 
 			to = Coord{from.File, from.Rank + dir*2}
-			canMoveDouble := (piece.Color == White && from.Rank == 1) || (piece.Color == Black && from.Rank == 6)
-			if to.IsValid() && canMoveDouble && board.At(to).IsValid() {
+			canMoveDouble := (piece.Color == White && from.Rank == 2) || (piece.Color == Black && from.Rank == 7)
+			if to.IsValid() && canMoveDouble && !board.At(to).IsValid() {
 				moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn}})
 			}
 		}
+
 		for off := 3; off > 0; off -= 2 {
-			to := Coord{from.File + off - 2, from.Rank + dir}
-			if to.IsValid() && (board.At(to).IsValid() && board.At(to).Color != piece.Color || board.EnPassantTarget == to) {
-				if to.Rank == 0 || to.Rank == 7 {
+			to = Coord{from.File + off - 2, from.Rank + dir}
+			if to.IsValid() && ((board.At(to).IsValid() && board.At(to).Color != piece.Color) || board.EnPassantTarget == to) {
+				if to.Rank == 1 || to.Rank == 8 {
 					for _, t := range promoteTypes {
-						moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn, Captures: board.At(to).Name, Promotes: t}})
+						moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn, Captures: board.At(to).Name, PromotesTo: t}})
 					}
 				} else {
-					enPassant := false
-					if board.EnPassantTarget == to {
-						enPassant = true
-					}
-					moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn, Captures: board.At(to).Name, EnPassant: enPassant}})
+					enPassant := board.EnPassantTarget == to
+					moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: Pawn, Captures: board.At(to).Name, IsEnPassant: enPassant}})
 				}
 			}
 		}
@@ -86,7 +64,7 @@ func (board *Board) genPawnMoves(pieces []int) []Move {
 
 	return moveSet
 }
-func (board *Board) genKnightMoves(pieces []int) []Move {
+func (board *Board) knightMoves(pieces []int) []Move {
 	moveSet := make([]Move, 0, 16)
 
 	for _, i := range pieces {
@@ -106,7 +84,7 @@ func (board *Board) genKnightMoves(pieces []int) []Move {
 
 	return moveSet
 }
-func (board *Board) genSlidingMoves(pieces []int) []Move {
+func (board *Board) slidingMoves(pieces []int) []Move {
 	moveSet := make([]Move, 0, 128)
 
 	for _, i := range pieces {
@@ -140,7 +118,7 @@ func (board *Board) genSlidingMoves(pieces []int) []Move {
 
 	return moveSet
 }
-func (board *Board) genKingMoves(pieces []int) []Move {
+func (board *Board) kingMoves(pieces []int) []Move {
 	moveSet := make([]Move, 0, 8)
 
 	for _, i := range pieces {
@@ -161,31 +139,22 @@ func (board *Board) genKingMoves(pieces []int) []Move {
 
 		checkCastle := func(side CastleSide, dir int) {
 			between, to := Coord{from.File + 1*dir, from.Rank}, Coord{from.File + 2*dir, from.Rank}
-			if board.CastleRights.Can(piece.Color, side) && !board.At(between).IsValid() && board.At(to).IsValid() {
-				moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: King, Castle: side}})
+			if board.CastleRights.Can(piece.Color, side) && !board.At(between).IsValid() && !board.At(to).IsValid() {
+				moveSet = append(moveSet, Move{from, to, MoveFlags{Moves: King, CastlesTo: side}})
 			}
 		}
-		checkCastle(Kingside, 1)
-		checkCastle(Queenside, -1)
+		if (from.Rank == 1 || from.Rank == 8) && from.File == 5 {
+			checkCastle(Kingside, 1)
+			checkCastle(Queenside, -1)
+		}
 
 		break
 	}
 
 	return moveSet
 }
-func (board *Board) genPseudoMoves(types ...PieceName) []Move {
-	moveSet := make([]Move, 0, 128)
 
-	pieces := board.getPieceIndices(board.SideToMove, types...)
-
-	moveSet = append(moveSet, board.genPawnMoves(pieces)...)
-	moveSet = append(moveSet, board.genKnightMoves(pieces)...)
-	moveSet = append(moveSet, board.genSlidingMoves(pieces)...)
-	moveSet = append(moveSet, board.genKingMoves(pieces)...)
-
-	return moveSet
-}
-func (board *Board) kingInCheck(side SideColor) bool {
+func (board *Board) InCheck(side SideColor) bool {
 	var from Coord
 	for i := 0; i < len(board.squares); i++ {
 		if board.squares[i].Color == side && board.squares[i].Name == King {
@@ -231,49 +200,69 @@ func (board *Board) kingInCheck(side SideColor) bool {
 
 	return false
 }
-func (board *Board) GenMoves() []Move {
-	pseudoMoves := board.genPseudoMoves()
+func (board *Board) InCheckmate() bool {
+	return board.InCheck(board.SideToMove) && len(board.Moves()) == 0
+}
+func (board *Board) InStalemate() bool {
+	return !board.InCheck(board.SideToMove) && len(board.Moves()) == 0
+}
+
+func (board *Board) PseudoMoves(types ...PieceName) []Move {
+	moveSet := make([]Move, 0, 128)
+
+	pieces := board.pieceIndices(board.SideToMove, types...)
+
+	moveSet = append(moveSet, board.pawnMoves(pieces)...)
+	moveSet = append(moveSet, board.knightMoves(pieces)...)
+	moveSet = append(moveSet, board.slidingMoves(pieces)...)
+	moveSet = append(moveSet, board.kingMoves(pieces)...)
+
+	return moveSet
+}
+func (board *Board) Moves() []Move {
+	pseudoMoves := board.PseudoMoves()
 	moveSet := make([]Move, 0, len(pseudoMoves))
 	side := board.SideToMove
 
 	for _, move := range pseudoMoves {
 		isLegal := true
 
-		if move.Castle.IsValid() {
+		if move.CastlesTo.IsValid() {
 			off := 1
-			if move.Castle == Queenside {
+			if move.CastlesTo == Queenside {
 				off = -1
 			}
 
-			if board.kingInCheck(side) {
+			if board.InCheck(side) {
 				isLegal = false
 			} else {
-				if err := board.MakeMove(Move{move.From, Coord{move.From.File + off, move.From.Rank}, MoveFlags{Moves: King}}); err != nil {
+				if actual := board.MakeMove(Move{move.From, Coord{move.From.File + off, move.From.Rank}, MoveFlags{Moves: King}}); !actual.IsValid() {
 					isLegal = false
 				}
 
-				if board.kingInCheck(side) {
+				if board.InCheck(side) {
 					isLegal = false
 				}
 				board.UnmakeMove()
 			}
 		}
 
+		var actual Move
 		if isLegal {
-			if err := board.MakeMove(move); err != nil {
-				panic(fmt.Sprintf("invalid move generated: %v", err))
+			if actual = board.MakeMove(move); !actual.IsValid() {
+				panic(fmt.Sprintf("invalid move generated: %v", actual))
 			}
 
-			if board.kingInCheck(side) {
+			if board.InCheck(side) {
 				isLegal = false
 			}
-			if _, ok := board.UnmakeMove(); !ok {
+			if m := board.UnmakeMove(); !m.IsValid() {
 				fmt.Println("Unable to unmake move")
 			}
 		}
 
 		if isLegal {
-			moveSet = append(moveSet, move)
+			moveSet = append(moveSet, actual)
 		}
 	}
 
@@ -284,27 +273,27 @@ func (board *Board) CountMoves(depth int) (int, []int) {
 		return 1, nil
 	}
 
-	moves := board.GenMoves()
+	moves := board.Moves()
 	// if depth == 1 {
 	// 	return len(moves), []int{}
 	// }
 
 	count, breakdown := 0, make([]int, 8)
 	for _, move := range moves {
-		if err := board.MakeMove(move); err != nil {
-			panic("invalid move generated")
+		if actual := board.MakeMove(move); !actual.IsValid() {
+			panic(fmt.Sprintf("invalid move generated: %v", actual))
 		}
 
 		if move.Captures.IsValid() {
 			breakdown[0]++
 		}
-		if move.EnPassant {
+		if move.IsEnPassant {
 			breakdown[1]++
 		}
-		if move.Castle.IsValid() {
+		if move.CastlesTo.IsValid() {
 			breakdown[2]++
 		}
-		if move.Promotes.IsValid() {
+		if move.PromotesTo.IsValid() {
 			breakdown[3]++
 		}
 
@@ -320,171 +309,140 @@ func (board *Board) CountMoves(depth int) (int, []int) {
 	return count, breakdown
 }
 
-func (board *Board) MakeMove(move Move) (err error) {
-	if !move.IsValid() {
-		return fmt.Errorf("invalid move coordinates")
+func (board *Board) updateState(move Move) {
+	board.EnPassantTarget = Coord{0, 0}
+	if diff := move.From.Rank - move.To.Rank; move.Moves == Pawn && diff/2 != 0 {
+		left, right := board.At(Coord{move.To.File + 1, move.To.Rank}), board.At(Coord{move.To.File - 1, move.To.Rank})
+		if (left != nil && left.Name == Pawn && left.Color != board.SideToMove) || (right != nil && right.Name == Pawn && right.Color != board.SideToMove) {
+			board.EnPassantTarget = Coord{move.To.File, move.To.Rank + diff/2}
+		}
 	}
-	turn := moveState{move, board.CastleRights, board.EnPassantTarget, board.HalfmoveClock}
+
+	if move.Moves == King {
+		board.CastleRights.Disallow(board.SideToMove, Kingside)
+		board.CastleRights.Disallow(board.SideToMove, Queenside)
+	} else if move.Moves == Rook || move.Captures == Rook {
+		var rook Coord
+		if move.Moves == Rook {
+			rook = move.From
+		} else {
+			rook = move.To
+		}
+
+		switch rook {
+		case Coord{1, 1}:
+			board.CastleRights.Disallow(White, Queenside)
+		case Coord{8, 1}:
+			board.CastleRights.Disallow(White, Kingside)
+		case Coord{1, 8}:
+			board.CastleRights.Disallow(Black, Queenside)
+		case Coord{8, 8}:
+			board.CastleRights.Disallow(Black, Kingside)
+		}
+	}
+
+	board.SideToMove ^= 0b11
+	if board.SideToMove == White {
+		board.FullmoveCounter++
+	}
+	if move.Moves == Pawn || board.At(move.To).IsValid() {
+		board.HalfmoveClock = 0
+	} else {
+		board.HalfmoveClock++
+	}
+}
+func (board *Board) MakeMove(move Move) (actual Move) {
+	if !move.IsValid() {
+		return
+	}
 
 	movePiece := *board.At(move.From)
-	if move.Moves != movePiece.Name {
-		return fmt.Errorf("piece types don't match")
-	}
-
-	if diff := move.From.File - move.To.File; move.Castle.IsValid() {
-		if !board.CastleRights.Can(board.SideToMove, move.Castle) {
-			return fmt.Errorf("castling on that side is not allowed: %v [%v]", move.Castle, board.String())
-		} else if move.Captures.IsValid() {
-			return fmt.Errorf("cannot castle and capture")
-		} else if move.Promotes.IsValid() {
-			return fmt.Errorf("cannot castle and promote")
-		} else if move.EnPassant {
-			return fmt.Errorf("cannot castle and en passant")
-		} else if movePiece.Name != King || diff/2 == 0 {
-			return fmt.Errorf("invalid castle conditions")
-		}
-	} else if movePiece.Name == King && diff/2 != 0 {
-		return fmt.Errorf("cannot castle implicitly")
+	actual.Moves = movePiece.Name
+	if move.PromotesTo.IsValid() {
+		movePiece = Piece{movePiece.Color, move.PromotesTo}
+		actual.PromotesTo = movePiece.Name
 	}
 
 	capturePiece := *board.At(move.To)
-	if move.Captures != capturePiece.Name {
-		return fmt.Errorf("capture types don't match")
-	}
+	actual.Captures = capturePiece.Name
 
-	if promoteType := move.Promotes; promoteType.IsValid() {
-		if movePiece.Name != Pawn || (move.To.Rank != 7 && move.To.Rank != 0) || promoteType == King || promoteType == Pawn {
-			return fmt.Errorf("invalid promotion: %v [%v] on rank %d", movePiece, promoteType, move.To.Rank)
+	if move.CastlesTo.IsValid() {
+		var rookFrom, rookTo Coord
+		if move.CastlesTo == Kingside {
+			rookFrom = Coord{8, move.To.Rank}
+		} else {
+			rookFrom = Coord{1, move.To.Rank}
 		}
 
-		movePiece = Piece{movePiece.Color, promoteType}
-	} else if movePiece.Name == Pawn && (move.To.Rank == 7 || move.To.Rank == 0) {
-		return fmt.Errorf("pawns on the last rank must promote")
-	}
+		off := int(move.CastlesTo)*2 - 3
+		rookTo = Coord{move.To.File + off, move.To.Rank}
+		if !rookFrom.IsValid() || !rookTo.IsValid() {
+			return
+		}
 
-	if move.EnPassant && move.To != board.EnPassantTarget {
-		return fmt.Errorf("cannot en passant in this position: %v", board.String())
-	} else if move.EnPassant && movePiece.Name != Pawn {
-		return fmt.Errorf("cannot en passant non-pawn piece")
+		*board.At(rookTo) = *board.At(rookFrom)
+		*board.At(rookFrom) = Piece{0, 0}
+		actual.CastlesTo = move.CastlesTo
+	} else if movePiece.Name == Pawn && move.To == board.EnPassantTarget {
+		*board.At(Coord{move.To.File, move.From.Rank}) = Piece{0, 0}
+		actual.IsEnPassant = true
 	}
 
 	*board.At(move.To) = movePiece
 	*board.At(move.From) = Piece{0, 0}
 
-	if move.Castle == Kingside {
-		rook := board.At(Coord{7, move.To.Rank})
-		home := board.At(Coord{5, move.To.Rank})
-		*home = *rook
-		*rook = Piece{0, 0}
-	} else if move.Castle == Queenside {
-		rook := board.At(Coord{0, move.To.Rank})
-		home := board.At(Coord{3, move.To.Rank})
-		*home = *rook
-		*rook = Piece{0, 0}
-	} else if movePiece.Name == Pawn && move.To == board.EnPassantTarget {
-		*board.At(Coord{move.To.File, move.From.Rank}) = Piece{0, 0}
-	}
+	actual.To = move.To
+	actual.From = move.From
+	actual.OffersDraw = move.OffersDraw
 
-	board.EnPassantTarget = Coord{0, 0}
-	if diff := move.From.Rank - move.To.Rank; movePiece.Name == Pawn && diff/2 != 0 {
-		left, right := board.At(Coord{move.To.File + 1, move.To.Rank}), board.At(Coord{move.To.File - 1, move.To.Rank})
-		if (left != nil && left.Name == Pawn && left.Color != movePiece.Color) || (right != nil && right.Name == Pawn && right.Color != movePiece.Color) {
-			board.EnPassantTarget = Coord{move.To.File, move.To.Rank + diff/2}
-		}
-	}
-
-	if movePiece.Name == King {
-		board.CastleRights.Disallow(board.SideToMove, Kingside)
-		board.CastleRights.Disallow(board.SideToMove, Queenside)
-	} else if movePiece.Name == Rook {
-		switch move.From {
-		case Coord{0, 0}:
-			board.CastleRights.Disallow(White, Queenside)
-		case Coord{7, 0}:
-			board.CastleRights.Disallow(White, Kingside)
-		case Coord{0, 7}:
-			board.CastleRights.Disallow(Black, Queenside)
-		case Coord{7, 7}:
-			board.CastleRights.Disallow(Black, Kingside)
-		}
-	} else if move.Captures == Rook {
-		switch move.To {
-		case Coord{0, 0}:
-			board.CastleRights.Disallow(White, Queenside)
-		case Coord{7, 0}:
-			board.CastleRights.Disallow(White, Kingside)
-		case Coord{0, 7}:
-			board.CastleRights.Disallow(Black, Queenside)
-		case Coord{7, 7}:
-			board.CastleRights.Disallow(Black, Kingside)
-		}
-	}
-
-	board.SideToMove ^= 0b11
-	if movePiece.Color == Black {
-		board.FullmoveCounter++
-	}
-	if movePiece.Name == Pawn || board.At(move.To).IsValid() {
-		board.HalfmoveClock = 0
-	} else {
-		board.HalfmoveClock++
-	}
-
-	if board.history == nil {
-		board.history = make([]moveState, 0, 128)
-	}
-	board.history = append(board.history, turn)
+	board.history = append(board.history, BoardState{actual, board.BoardData})
+	board.updateState(actual)
 
 	return
 }
-func (board *Board) UnmakeMove() (Move, bool) {
+func (board *Board) UnmakeMove() Move {
 	if len(board.history) == 0 {
-		return Move{}, false
+		return Move{}
 	}
 
 	i := len(board.history) - 1
-	turn := board.history[i]
-
-	to, from := board.At(turn.To), board.At(turn.From)
-	if !turn.Promotes.IsValid() {
-		*from = *to
-	} else {
-		*from = Piece{to.Color, Pawn}
+	state := board.history[i]
+	if !state.Move.IsValid() {
+		return Move{}
 	}
 
-	if turn.Captures.IsValid() {
-		*to = Piece{board.SideToMove, turn.Captures}
+	to, from := board.At(state.To), board.At(state.From)
+	if state.PromotesTo.IsValid() {
+		*from = Piece{to.Color, Pawn}
+	} else {
+		*from = *to
+	}
+
+	if state.Captures.IsValid() {
+		*to = Piece{board.SideToMove, state.Captures}
 	} else {
 		*to = Piece{0, 0}
 	}
 
-	if turn.Castle == Kingside {
-		rook := board.At(Coord{5, turn.To.Rank})
-		corner := board.At(Coord{7, turn.To.Rank})
+	if state.CastlesTo == Kingside {
+		rook := board.At(Coord{6, state.To.Rank})
+		corner := board.At(Coord{8, state.To.Rank})
 		*corner = *rook
 		*rook = Piece{0, 0}
-	} else if turn.Castle == Queenside {
-		rook := board.At(Coord{3, turn.To.Rank})
-		corner := board.At(Coord{0, turn.To.Rank})
+	} else if state.CastlesTo == Queenside {
+		rook := board.At(Coord{4, state.To.Rank})
+		corner := board.At(Coord{1, state.To.Rank})
 		*corner = *rook
 		*rook = Piece{0, 0}
 	}
 
-	if turn.EnPassant {
-		passant := Coord{turn.To.File, turn.From.Rank}
+	if state.IsEnPassant {
+		passant := Coord{state.To.File, state.From.Rank}
 		*board.At(passant) = Piece{board.SideToMove, Pawn}
-		board.EnPassantTarget = Coord{turn.To.File, turn.From.Rank}
 	}
 
-	board.SideToMove ^= 0b11
-	if board.SideToMove == Black {
-		board.FullmoveCounter--
-	}
-
-	board.CastleRights = turn.CastleRights
-	board.EnPassantTarget = turn.EnPassantTarget
-	board.HalfmoveClock = turn.HalfmoveClock
-
+	board.BoardData = state.BoardData
 	board.history = board.history[:i]
-	return turn.Move, true
+
+	return state.Move
 }

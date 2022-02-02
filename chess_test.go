@@ -163,9 +163,11 @@ func TestBoardToFEN(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, Knight}, {0, 0}, {0, 0}, {Black, Pawn},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      White,
-				CastleRights:    NewCastles("-"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      White,
+					CastleRights:    NewCastles("-"),
+					FullmoveCounter: 1,
+				},
 			},
 			"8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 0 1",
 		},
@@ -181,9 +183,11 @@ func TestBoardToFEN(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{Black, Rook}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      White,
-				CastleRights:    NewCastles("KQq"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      White,
+					CastleRights:    NewCastles("KQq"),
+					FullmoveCounter: 1,
+				},
 			},
 			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
 		},
@@ -199,9 +203,11 @@ func TestBoardToFEN(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      White,
-				CastleRights:    NewCastles("KQ"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      White,
+					CastleRights:    NewCastles("KQ"),
+					FullmoveCounter: 1,
+				},
 			},
 			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
 		},
@@ -217,9 +223,11 @@ func TestBoardToFEN(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      Black,
-				CastleRights:    NewCastles("Q"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      Black,
+					CastleRights:    NewCastles("Q"),
+					FullmoveCounter: 1,
+				},
 			},
 			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
 		},
@@ -235,9 +243,11 @@ func TestBoardToFEN(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      Black,
-				CastleRights:    NewCastles("-"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      Black,
+					CastleRights:    NewCastles("-"),
+					FullmoveCounter: 1,
+				},
 			},
 			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
 		},
@@ -271,10 +281,12 @@ func TestFENToBoard(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, Knight}, {0, 0}, {0, 0}, {Black, Pawn},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      White,
-				CastleRights:    NewCastles("-"),
-				HalfmoveClock:   5,
-				FullmoveCounter: 13,
+				BoardData: BoardData{
+					SideToMove:      White,
+					CastleRights:    NewCastles("-"),
+					HalfmoveClock:   5,
+					FullmoveCounter: 13,
+				},
 			},
 			"8/4n2p/4k3/1PP5/2K5/8/8/8 w - - 5 13",
 		},
@@ -290,9 +302,11 @@ func TestFENToBoard(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{Black, Rook}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      White,
-				CastleRights:    NewCastles("KQq"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      White,
+					CastleRights:    NewCastles("KQq"),
+					FullmoveCounter: 1,
+				},
 			},
 			"r3k3/8/8/8/8/8/8/R3K2R w KQq - 0 1",
 		},
@@ -308,9 +322,11 @@ func TestFENToBoard(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      White,
-				CastleRights:    NewCastles("KQ"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      White,
+					CastleRights:    NewCastles("KQ"),
+					FullmoveCounter: 1,
+				},
 			},
 			"4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
 		},
@@ -326,9 +342,11 @@ func TestFENToBoard(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      Black,
-				CastleRights:    NewCastles("Q"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      Black,
+					CastleRights:    NewCastles("Q"),
+					FullmoveCounter: 1,
+				},
 			},
 			"4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
 		},
@@ -344,9 +362,11 @@ func TestFENToBoard(t *testing.T) {
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 					{0, 0}, {0, 0}, {0, 0}, {0, 0}, {Black, King}, {0, 0}, {0, 0}, {0, 0},
 				},
-				SideToMove:      Black,
-				CastleRights:    NewCastles("-"),
-				FullmoveCounter: 1,
+				BoardData: BoardData{
+					SideToMove:      Black,
+					CastleRights:    NewCastles("-"),
+					FullmoveCounter: 1,
+				},
 			},
 			"4k3/8/8/8/8/8/8/4K3 b - - 0 1",
 		},
@@ -362,10 +382,12 @@ func TestFENToBoard(t *testing.T) {
 					{Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {Black, Pawn}, {0, 0}, {0, 0}, {Black, Pawn}, {Black, Pawn},
 					{Black, Rook}, {Black, Knight}, {Black, Bishop}, {Black, Queen}, {Black, King}, {Black, Bishop}, {Black, Knight}, {Black, Rook},
 				},
-				SideToMove:      White,
-				CastleRights:    NewCastles("KQkq"),
-				EnPassantTarget: NewCoord("e6"),
-				FullmoveCounter: 3,
+				BoardData: BoardData{
+					SideToMove:      White,
+					CastleRights:    NewCastles("KQkq"),
+					EnPassantTarget: NewCoord("e6"),
+					FullmoveCounter: 3,
+				},
 			},
 			"rnbqkbnr/pppp2pp/5p2/3Pp3/8/8/PPP1PPPP/RNBQKBNR w KQkq e6 0 3",
 		},
@@ -452,7 +474,7 @@ func TestUnmakeMove(t *testing.T) {
 	}{
 		{
 			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-			Move{Coord{5, 1}, Coord{7, 1}, MoveFlags{Moves: King, Castle: Kingside}},
+			Move{Coord{5, 1}, Coord{7, 1}, MoveFlags{Moves: King, CastlesTo: Kingside}},
 		},
 	}
 
@@ -460,8 +482,8 @@ func TestUnmakeMove(t *testing.T) {
 		board, _ := NewBoard(test.position)
 		apply := *board
 
-		if err := apply.MakeMove(test.move); err != nil {
-			t.Errorf("Make move failed: %v", err)
+		if actual := apply.MakeMove(test.move); !actual.IsValid() {
+			t.Errorf("Make move failed: %v", actual)
 		}
 		apply.UnmakeMove()
 
@@ -574,7 +596,7 @@ func TestCountMoves(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for _, test := range tests[:] {
 		board, _ := NewBoard(test.position)
 		if got, breakdown := board.CountMoves(test.depth); got != test.want {
 			t.Errorf("CountMoves() on [d=%d] %q = %d, want %d\n\t%v", test.depth, test.position, got, test.want, breakdown)
@@ -585,7 +607,7 @@ func TestCountMoves(t *testing.T) {
 func BenchmarkMoveGen(b *testing.B) {
 	board, _ := NewBoard("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
 	for i := 0; i < b.N; i++ {
-		board.GenMoves()
+		board.Moves()
 	}
 }
 

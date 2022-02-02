@@ -24,7 +24,19 @@ func NewPieceName(p string) PieceName {
 func (n PieceName) IsValid() bool {
 	return n > 0 && n <= King
 }
+func (n PieceName) IsValidPromoteType() bool {
+	return n > Pawn && n < King
+}
 
+func (name PieceName) Abbreviation() string {
+	return map[PieceName]string{
+		Knight: "N",
+		Bishop: "B",
+		Rook:   "R",
+		Queen:  "Q",
+		King:   "K",
+	}[name]
+}
 func (name PieceName) String() string {
 	switch name {
 	case 0:
@@ -71,6 +83,9 @@ func NewPiece(abbr string) Piece {
 
 func (p Piece) IsValid() bool {
 	return p.Color.IsValid() && p.Name.IsValid()
+}
+func (p Piece) IsEmpty() bool {
+	return p.Name == 0
 }
 
 func (piece Piece) String() string {
