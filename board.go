@@ -236,6 +236,15 @@ func (board *Board) At(c Coord) *Piece {
 	}
 	return &board.squares[c.Index()]
 }
+func (board *Board) History() []string {
+	history := make([]string, 0, len(board.history))
+
+	for _, state := range board.history {
+		history = append(history, state.Move.String())
+	}
+
+	return history
+}
 func (board *Board) pieceIndices(side SideColor, names ...PieceName) []int {
 	pieces := make([]int, 0, 16)
 

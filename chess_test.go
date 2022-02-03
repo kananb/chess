@@ -615,6 +615,41 @@ func TestMoveFromSAN(t *testing.T) {
 	}
 }
 
+func TestBoardHistory(t *testing.T) {
+	board := StartingPosition()
+	moves := []Move{
+		{From: NewCoord("d2"), To: NewCoord("d4")},
+		{From: NewCoord("e7"), To: NewCoord("e6")},
+		{From: NewCoord("c1"), To: NewCoord("f4")},
+		{From: NewCoord("d7"), To: NewCoord("d5")},
+		{From: NewCoord("e2"), To: NewCoord("e3")},
+		{From: NewCoord("b8"), To: NewCoord("c6")},
+	}
+	want := []string{
+		"d2d4", "e7e6", "Bc1f4", "d7d5", "e2e3", "Nb8c6",
+	}
+
+	for _, move := range moves {
+		board.MakeMove(move)
+	}
+
+	if hist := board.History(); len(hist) != len(want) {
+		t.Errorf("Board.History() length = %d, want %d", len(hist), len(want))
+	} else {
+		same := true
+		for i := 0; i < len(want); i++ {
+			if want[i] != hist[i] {
+				same = false
+				break
+			}
+		}
+
+		if !same {
+			t.Errorf("Board.History() = %v, want %v", hist, want)
+		}
+	}
+}
+
 func BenchmarkMoveGen(b *testing.B) {
 	board, _ := NewBoard("r2qr1k1/pp3pp1/2n2n1p/2bp4/6b1/2PB1NN1/PP3PPP/R1BQR1K1 w - - 3 13")
 	for i := 0; i < b.N; i++ {
