@@ -206,6 +206,10 @@ func (board *Board) InCheckmate() bool {
 func (board *Board) InStalemate() bool {
 	return !board.InCheck(board.SideToMove) && len(board.Moves()) == 0
 }
+func (board *Board) GameOver() bool {
+	count := len(board.Moves())
+	return (board.InCheck(board.SideToMove) && count == 0) || (!board.InCheck(board.SideToMove) && count == 0)
+}
 
 func (board *Board) PseudoMoves(types ...PieceName) []Move {
 	moveSet := make([]Move, 0, 128)
